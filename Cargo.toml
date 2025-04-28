@@ -1,0 +1,24 @@
+[package]
+name = "sticknodes-rs"
+version = "1.0.0"
+description = "Unofficial Stick Nodes asset manipulation library. Currently only supports Stickfigures. Currently only supports assets up to version 4.1.0 build 21."
+keywords = ["stick", "nodes", "asset", "read", "write"]
+categories = ["no-std", "parser-implementations"]
+repository = "https://github.com/vinceTheProgrammer/sticknodes-rs"
+license = "MIT"
+edition = "2021"
+
+[badges]
+maintenance = { status = "passively-maintained" }
+
+[features]
+default = []
+std = []
+
+[dependencies]
+byteorder = { git="https://github.com/vinceTheProgrammer/byteorder-core2-fork.git", default-features = false }
+core2 = { version = "0.4.0", default-features = false, features = ["alloc"] }
+hashbrown = { version = "0.15.2", features = ["serde"] }
+petgraph = { version = "0.8.1", default-features = false, features = ["serde-1"]}
+serde = { version = "1.0.219", default-features = false, features = ["derive", "alloc"] }
+thiserror = { version = "2.0.12", default-features = false }
