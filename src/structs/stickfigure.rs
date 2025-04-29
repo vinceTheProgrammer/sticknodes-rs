@@ -186,7 +186,7 @@ impl Stickfigure {
     ///
     /// # Returns
     ///
-    /// The `DrawOrderIndex` of the newly added node.
+    /// Result of `DrawOrderIndex` of the newly added node.
     pub fn add_node(
         &mut self,
         node: Node,
@@ -478,12 +478,15 @@ impl Stickfigure {
         Ok(())
     }
 
-    pub fn add_polyfill(&mut self, polyfill: Polyfill) -> usize {
+    pub fn add_polyfill(&mut self, polyfill: Polyfill) -> DrawOrderIndex {
         let rc_polyfill = Rc::new(RefCell::new(polyfill));
+        let draw_index = {
+            rc_polyfill.borrow().anchor_node_draw_index
+        };
         self.polyfill_anchors
             .push(rc_polyfill.borrow().anchor_node_draw_index);
         self.polyfills.push(rc_polyfill);
-        self.polyfills.len() - 1
+        draw_index
     }
 
     pub fn get_polyfill(&self, draw_index: DrawOrderIndex) -> Option<Rc<RefCell<Polyfill>>> {

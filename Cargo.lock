@@ -9,9 +9,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
-name = "byteorder"
-version = "1.5.0"
-source = "git+https://github.com/vinceTheProgrammer/byteorder-core2-fork.git#f0d0a0880db1a183a7ce6deb2d6bdf211e690090"
+name = "byteorder-core2"
+version = "1.5.0-core2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1cbabb8bdab125f89b66fd9717f54e8194cb3018881113939f8e686ac5397eb3"
 dependencies = [
  "core2",
 ]
@@ -126,7 +127,7 @@ dependencies = [
 name = "sticknodes-rs"
 version = "1.0.0"
 dependencies = [
- "byteorder",
+ "byteorder-core2",
  "core2",
  "hashbrown",
  "petgraph",

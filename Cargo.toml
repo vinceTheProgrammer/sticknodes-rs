@@ -16,7 +16,7 @@ default = []
 std = []
 
 [dependencies]
-byteorder = { git="https://github.com/vinceTheProgrammer/byteorder-core2-fork.git", default-features = false }
+byteorder-core2 = { version="1.5.0-core2", default-features = false }
 core2 = { version = "0.4.0", default-features = false, features = ["alloc"] }
 hashbrown = { version = "0.15.2", features = ["serde"] }
 petgraph = { version = "0.8.1", default-features = false, features = ["serde-1"]}

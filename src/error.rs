@@ -5,6 +5,9 @@ use alloc::string::String;
 
 #[derive(Error, Debug)]
 pub enum LibraryError {
+    #[error("Error: {0}")]
+    AnyString(String),
+    
     #[error("Stick Nodes version {0} is not supported. Please check if an update to this library is available.")]
     UnsupportedVersion(i32),
 
