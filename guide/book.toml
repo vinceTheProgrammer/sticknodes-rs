@@ -1,0 +1,9 @@
+[book]
+authors = ["vincetheprogrammer"]
+language = "en"
+multilingual = false
+src = "src"
+title = "sticknodes-rs Guide"
+
+[output.html]
+site-url = "/sticknodes-rs/"

@@ -3,12 +3,13 @@
 [![Crates.io](https://img.shields.io/crates/v/sticknodes-rs.svg)](https://crates.io/crates/sticknodes-rs)
 [![Docs.rs](https://docs.rs/sticknodes-rs/badge.svg)](https://docs.rs/sticknodes-rs)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Guide](https://img.shields.io/badge/Guide-388434?logo=mdBook&logoColor=fff)](https://vincetheprogrammer.github.io/sticknodes-rs/)
 
 A Rust library for reading, creating, and manipulating **Stick Nodes** assets.
 
 Currently supports **`.nodes` (stickfigure)** files, with planned support for **`.stknds` (projects)** and **`.nodemc` (movieclips)** in the future.
 
-> **Version:** 1.0.0  
+> **Version:** 1.0.0
 > **Supported Stick Nodes Version:** Up to 4.1.0 build 21  
 > **Note:** This is my first serious Rust library—feedback is welcome!
 

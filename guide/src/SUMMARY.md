@@ -1,0 +1,27 @@
+# Summary
+
+[Introduction](./introduction.md)
+[Installation](./installation.md)
+
+# Reference Guide
+- [Stickfigures](./stickfigures.md)
+    - [Anatomy of a Stickfigure](./stickfigures/anatomy.md)
+    - [Create](./stickfigures/create.md)
+    - [Modify](./stickfigures/modify.md)
+    - [Create from bytes](./stickfigures/create-from-bytes.md)
+    - [Export to bytes](./stickfigures/export-from-bytes.md)
+- [Nodes](./nodes.md)
+    - [Anatomy of a Node](./nodes/anatomy.md)
+    - [Get](./nodes/get.md)
+    - [Create](./nodes/create.md)
+    - [Modify](./nodes/modify.md)
+    - [Remove](./nodes/remove.md)
+    - [Bulk operations](./nodes/bulk.md)
+    - [Examples](./nodes/examples.md)
+- [Polyfills](./polyfills.md)
+    - [Anatomy of a Polyfill](./polyfills/anatomy.md)
+    - [Get](./polyfills/get.md)
+    - [Create](./polyfills/create.md)
+    - [Modify](./polyfills/modify.md)
+    - [Remove](./polyfills/remove.md)
+    - [Examples](./polyfills/examples.md)
