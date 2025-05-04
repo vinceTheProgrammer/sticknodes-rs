@@ -9,7 +9,7 @@ A Rust library for reading, creating, and manipulating **Stick Nodes** assets.
 
 Currently supports **`.nodes` (stickfigure)** files, with planned support for **`.stknds` (projects)** and **`.nodemc` (movieclips)** in the future.
 
-> **Version:** 1.0.0
+> **Version:** 2.0.0
 > **Supported Stick Nodes Version:** Up to 4.1.0 build 21  
 > **Note:** This is my first serious Rust library—feedback is welcome!
 
@@ -33,7 +33,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-sticknodes-rs = "1.0.0"
+sticknodes-rs = "2.0.0"
 ```
 
 ## Example Usage
