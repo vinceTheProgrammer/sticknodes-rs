@@ -316,14 +316,17 @@ impl Stickfigure {
     // }
 
     /// Get the `DrawOrderIndex` of the direct parent of the `Node` at the specified `DrawOrderIndex`.
-    pub fn get_parent(&self, draw_index: DrawOrderIndex) -> DrawOrderIndex {
+    pub fn get_parent(&self, draw_index: DrawOrderIndex) -> Option<DrawOrderIndex> {
         let child_node_index = self.node_index_from_draw_order(draw_index);
 
-        let parent_node_index = self.nodes.neighbors_directed(child_node_index, petgraph::Direction::Incoming).next().expect("Node does not have a parent even though every node should - bug in Stickfigure logic");
+        // TODO FIX THIS SHIT
+        if let Some(parent_node_index) = self.nodes.neighbors_directed(child_node_index, petgraph::Direction::Incoming).next() {
+            let parent_draw_index = self.draw_order_from_node_index(parent_node_index);
 
-        let parent_draw_index = self.draw_order_from_node_index(parent_node_index);
-
-        parent_draw_index
+            Some(parent_draw_index)
+        } else {
+            None
+        }
     }
 
     /// Get a `Vec<DrawOrderIndex>` containing all `DrawOrderIndex`s of `Node`s that are direct children of the `Node` at the specified `DrawOrderIndex`.
@@ -463,15 +466,14 @@ impl Stickfigure {
         }
         let node_index = self.node_index_from_draw_order(draw_index);
 
-        let parent_draw_index = self.get_parent(draw_index);
+        if let Some(parent_draw_index) = self.get_parent(draw_index) {
+            let child_draw_indices: Vec<DrawOrderIndex> = self.get_children(draw_index);
 
-        let child_draw_indices: Vec<DrawOrderIndex> = self.get_children(draw_index);
-
-        for child_draw_index in child_draw_indices.iter() {
-            self.add_edge(parent_draw_index, *child_draw_index);
+            for child_draw_index in child_draw_indices.iter() {
+                self.add_edge(parent_draw_index, *child_draw_index);
+            }
         }
 
-        // Step 4: Remove the node
         self.nodes.remove_node(node_index);
         self.compact_draw_indices();
 

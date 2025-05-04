@@ -125,7 +125,7 @@ dependencies = [
 
 [[package]]
 name = "sticknodes-rs"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "byteorder-core2",
  "core2",
