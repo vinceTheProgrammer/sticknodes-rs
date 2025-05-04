@@ -319,7 +319,6 @@ impl Stickfigure {
     pub fn get_parent(&self, draw_index: DrawOrderIndex) -> Option<DrawOrderIndex> {
         let child_node_index = self.node_index_from_draw_order(draw_index);
 
-        // TODO FIX THIS SHIT
         if let Some(parent_node_index) = self.nodes.neighbors_directed(child_node_index, petgraph::Direction::Incoming).next() {
             let parent_draw_index = self.draw_order_from_node_index(parent_node_index);
 
