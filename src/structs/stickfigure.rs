@@ -319,7 +319,11 @@ impl Stickfigure {
     pub fn get_parent(&self, draw_index: DrawOrderIndex) -> Option<DrawOrderIndex> {
         let child_node_index = self.node_index_from_draw_order(draw_index);
 
-        if let Some(parent_node_index) = self.nodes.neighbors_directed(child_node_index, petgraph::Direction::Incoming).next() {
+        if let Some(parent_node_index) = self
+            .nodes
+            .neighbors_directed(child_node_index, petgraph::Direction::Incoming)
+            .next()
+        {
             let parent_draw_index = self.draw_order_from_node_index(parent_node_index);
 
             Some(parent_draw_index)
@@ -481,9 +485,7 @@ impl Stickfigure {
 
     pub fn add_polyfill(&mut self, polyfill: Polyfill) -> DrawOrderIndex {
         let rc_polyfill = Rc::new(RefCell::new(polyfill));
-        let draw_index = {
-            rc_polyfill.borrow().anchor_node_draw_index
-        };
+        let draw_index = { rc_polyfill.borrow().anchor_node_draw_index };
         self.polyfill_anchors
             .push(rc_polyfill.borrow().anchor_node_draw_index);
         self.polyfills.push(rc_polyfill);
