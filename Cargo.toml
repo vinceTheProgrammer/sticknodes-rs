@@ -1,6 +1,6 @@
 [package]
 name = "sticknodes-rs"
-version = "2.0.0"
+version = "2.0.1"
 description = "Unofficial Stick Nodes asset manipulation library. Currently only supports Stickfigures. Currently only supports assets up to version 4.1.0 build 21."
 keywords = ["stick", "nodes", "asset", "read", "write"]
 categories = ["no-std", "parser-implementations"]

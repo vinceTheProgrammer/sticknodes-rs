@@ -92,6 +92,7 @@ impl Default for Node {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SerializableNode {
+    pub draw_order_index: DrawOrderIndex,
     pub node_type: NodeType,
     pub is_static: bool,
     pub is_stretchy: bool,
@@ -307,6 +308,7 @@ impl Node {
         }
 
         SerializableNode {
+            draw_order_index: node.get_draw_order_index(),
             children,
             node_type: node.node_type.clone(),
             is_static: node.is_static,
