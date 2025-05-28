@@ -209,6 +209,18 @@ impl Color {
         blue: 0,
         alpha: 255,
     };
+    pub const DEFAULT: Self = Color {
+        red: 32,
+        green: 32,
+        blue: 32,
+        alpha: 255,
+    };
+    pub const DEFAULT_GRADIENT: Self = Color {
+        red: 128,
+        green: 128,
+        blue: 128,
+        alpha: 255,
+    };
 }
 
 #[cfg(feature = "std")]

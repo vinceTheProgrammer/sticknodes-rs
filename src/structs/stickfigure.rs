@@ -1,6 +1,8 @@
 use core::cell::RefCell;
 
+use core2::io::Cursor;
 use core2::io::Read;
+use core2::io::Seek;
 use hashbrown::HashMap;
 use petgraph::graph::NodeIndex;
 use petgraph::visit::Dfs;
@@ -23,10 +25,10 @@ use crate::Polyfill;
 use crate::StickfigureError;
 
 const NODE_LIMIT: usize = 400;
-pub const SUPPORTED_APP_VERSION: i32 = 410;
-pub const SUPPORTED_APP_BUILD: i32 = 21;
+pub const SUPPORTED_APP_VERSION: i32 = 423;
+pub const SUPPORTED_APP_BUILD: i32 = 72;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord, Default)]
 #[serde(transparent)]
 pub struct DrawOrderIndex(pub i32);
 
@@ -161,8 +163,10 @@ impl Stickfigure {
     }
 
     /// Creates a new `Stickfigure` from raw bytes of a `.nodes` file.
-    pub fn from_bytes(reader: &mut impl Read) -> Result<Self, LibraryError> {
-        let stickfigure = read_stickfigure(reader)?;
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, LibraryError> {
+        let mut reader = Cursor::new(bytes);
+
+        let stickfigure = read_stickfigure(&mut reader)?;
         Ok(stickfigure)
     }
 

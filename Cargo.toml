@@ -1,6 +1,6 @@
 [package]
 name = "sticknodes-rs"
-version = "2.0.1"
+version = "3.0.0-alpha"
 description = "Unofficial Stick Nodes asset manipulation library. Currently only supports Stickfigures. Currently only supports assets up to version 4.1.0 build 21."
 keywords = ["stick", "nodes", "asset", "read", "write"]
 categories = ["no-std", "parser-implementations"]
@@ -19,6 +19,8 @@ std = []
 byteorder-core2 = { version="1.5.0-core2", default-features = false }
 core2 = { version = "0.4.0", default-features = false, features = ["alloc"] }
 hashbrown = { version = "0.15.2", features = ["serde"] }
+libm = "0.2.15"
+miniz_oxide = { version = "0.8.8", default-features = false, features = ["with-alloc"] }
 petgraph = { version = "0.8.1", default-features = false, features = ["serde-1"]}
 serde = { version = "1.0.219", default-features = false, features = ["derive", "alloc"] }
 thiserror = { version = "2.0.12", default-features = false }

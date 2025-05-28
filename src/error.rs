@@ -18,10 +18,18 @@ pub enum LibraryError {
     StickfigureError(#[from] StickfigureError),
 }
 
+// TODO, add non-exaustive annotation breaking change to prevent future breaking changes when adding new errors.
 #[derive(Error, Debug)]
 pub enum StickfigureError {
     #[error("I/O error: {0}")]
     Io(io::Error),
+
+    #[error("{0}")]
+    GenericError(String),
+
+    // TODO, add later. Will be a breaking change.
+    // #[error("Error when decompressing zlib data")]
+    // Decompression(),
 
     #[error("Invalid stickfigure header: {0}")]
     InvalidHeader(String),
