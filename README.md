@@ -1,4 +1,4 @@
-# Stick Nodes Asset Library
+# Stick Nodes Asset Manipulation Library
 
 [![Crates.io](https://img.shields.io/crates/v/sticknodes-rs.svg)](https://crates.io/crates/sticknodes-rs)
 [![Docs.rs](https://docs.rs/sticknodes-rs/badge.svg)](https://docs.rs/sticknodes-rs)
