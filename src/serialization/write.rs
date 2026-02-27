@@ -7,7 +7,7 @@ use alloc::{format, rc::Rc, vec, vec::Vec};
 
 use crate::{
     error::*,
-    structs::{node::*, polyfill::*, stickfigure::{self, *}}, ConnectorMethod,
+    structs::{node::*, polyfill::*, stickfigure::*}, ConnectorMethod,
 };
 
 fn write_stickfigure_header(stickfigure: &Stickfigure) -> Result<Vec<u8>, StickfigureError> {
@@ -175,8 +175,8 @@ fn write_node(
     {
         let mut node = rc_node.borrow_mut();
 
-        node.local_x = node.get_local_x();
-        node.local_y = node.get_local_y();
+        node.local_x = node.get_local_x(stickfigure);
+        node.local_y = node.get_local_y(stickfigure);
 
         match node.triangle_type {
             TriangleType::Isosceles => {

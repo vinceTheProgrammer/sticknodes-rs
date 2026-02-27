@@ -1,3 +1,4 @@
+use glam::Vec2;
 use hashbrown::HashSet;
 use serde::Deserialize;
 use serde::Serialize;
@@ -235,6 +236,20 @@ impl Polyfill {
         self.attached_node_draw_indices = valid_indices;
 
         missing_indices
+    }
+
+    pub fn get_global_vertices(&self, stickfigure: &Stickfigure) -> Vec<Vec2> {
+        let anchor_node = stickfigure.get_node(self.anchor_node_draw_index).expect("this is an internal library error because the anchor node draw index should always be valid");
+
+        let anchor_position = anchor_node.borrow().get_global_end(stickfigure);
+
+        let nodes = self.attached_node_draw_indices.iter().map(|id| stickfigure.get_node(*id).expect("this is an internal library error because all attached node draw indices should always be valid"));
+
+        let mut node_positions = nodes.map(|node| node.borrow().get_global_end(stickfigure)).collect::<Vec<Vec2>>();
+
+        node_positions.insert(0, anchor_position);
+
+        node_positions
     }
 
     // below methods are commented out because I don't know if they'd be worth existing since there would have to be some kind of special return for if the provided index to insert after/before is invalid.. which kind of defeats the point of the method. At that point just handle the error of the non try versions lol

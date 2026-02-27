@@ -1,3 +1,4 @@
+use glam::Vec2;
 use petgraph::graph::NodeIndex;
 use petgraph::Graph;
 use serde::Deserialize;
@@ -43,18 +44,18 @@ pub struct Node {
     pub half_arc: bool,
     pub(crate) right_triangle_direction: i16, // triangle type Isosceles -> 0; flipped = false, triangle type RightTriangle -> 1; flipped = true, triangle type RightTriangle -> -1
     pub triangle_type: TriangleType,
-    pub(crate) triangle_flipped: bool,
+    pub triangle_flipped: bool,
     pub triangle_upside_down: bool,
     /// Thickness of the start of the trapezoid node (the end nearest its parent node).
-    pub trapezoid_thickness_start: f32, // trapezoid_thickness_1
+    pub(crate) trapezoid_thickness_start: f32, // trapezoid_thickness_1
     /// Thickness of the end of the trapezoid node (the end furthest from its parent node).
-    pub trapezoid_thickness_end: f32, // trapezoid_thickness_2
+    pub(crate) trapezoid_thickness_end: f32, // trapezoid_thickness_2
     /// Whether the start thickness should be equal to trapezoid_thickness_start. If false, start thickness will equal node thickness.
     /// Only has effect specifically for Stick Nodes build 36. Otherwise, this property does nothing.
-    pub use_trapezoid_thickness_start: bool, // use_trapezoid_thickness_1
+    pub(crate) use_trapezoid_thickness_start: bool, // use_trapezoid_thickness_1
     /// Whether the end thickness should be equal to trapezoid_thickness_end. If false, end thickness will equal node thickness.
     /// Only has effect specifically for Stick Nodes build 36. Otherwise, this property does nothing.
-    pub use_trapezoid_thickness_end: bool, // use_trapezoid_thickness_2
+    pub(crate) use_trapezoid_thickness_end: bool, // use_trapezoid_thickness_2
     pub(crate) trapezoid_top_thickness_ratio: f32,
     pub trapezoid_is_rounded_start: bool, // trapezoid_is_rounded_1
     pub trapezoid_is_rounded_end: bool, // trapezoid_is_rounded_2
@@ -171,6 +172,7 @@ pub struct SerializableNode {
     pub segment_curve_polyfill_precision: i16,
     pub half_arc: bool,
     pub triangle_type: TriangleType,
+    pub triangle_flipped: bool,
     pub triangle_upside_down: bool,
     pub trapezoid_thickness_start: f32,
     pub trapezoid_thickness_end: f32,
@@ -214,12 +216,13 @@ pub struct NodeOptions {
     pub default_length: f32,
     pub length: f32,
     pub default_thickness: i32,
-    pub thickness: i32,
+    pub(crate) thickness: i32,
     pub segment_curve_radius_and_default_curve_radius: i32,
     pub curve_circulization: bool,
     pub segment_curve_polyfill_precision: i16,
     pub half_arc: bool,
     pub triangle_type: TriangleType,
+    pub triangle_flipped: bool,
     pub triangle_upside_down: bool,
     pub trapezoid_thickness_start: f32,
     pub trapezoid_thickness_end: f32,
@@ -289,6 +292,7 @@ impl Default for NodeOptions {
             smart_stretch_multiplier: 1.0,
             connector_data: None,
             triangle_type: TriangleType::Isosceles,
+            triangle_flipped: false,
         }
     }
 }
@@ -388,6 +392,7 @@ impl Node {
             is_floaty: self.is_floaty,
             smart_stretch_reset_impulse: self.smart_stretch_reset_impulse,
             triangle_type: self.triangle_type.clone(),
+            triangle_flipped: self.triangle_flipped,
             trapezoid_thickness_start: self.trapezoid_thickness_start,
             trapezoid_thickness_end: self.trapezoid_thickness_end,
             use_trapezoid_thickness_start: self.use_trapezoid_thickness_start,
@@ -450,6 +455,7 @@ impl Node {
             is_floaty: node.is_floaty,
             smart_stretch_reset_impulse: node.smart_stretch_reset_impulse,
             triangle_type: node.triangle_type,
+            triangle_flipped: node.triangle_flipped,
             trapezoid_thickness_start: node.trapezoid_thickness_start,
             trapezoid_thickness_end: node.trapezoid_thickness_end,
             use_trapezoid_thickness_start: node.use_trapezoid_thickness_start,
@@ -497,26 +503,88 @@ impl Node {
         global_angle
     }
 
-    pub fn get_local_x(&self) -> f32 {
-        self.length_angle_to_xy().0
+    pub fn get_local_x(&self, stickfigure: &Stickfigure) -> f32 {
+        self.get_local_position(stickfigure).x
     }
 
-    pub fn get_local_y(&self) -> f32 {
-        self.length_angle_to_xy().1
+    pub fn get_local_y(&self, stickfigure: &Stickfigure) -> f32 {
+        self.get_local_position(stickfigure).y
     }
 
-    fn length_angle_to_xy(&self) -> (f32, f32) {
+    pub fn get_local_position(&self, stickfigure: &Stickfigure) -> Vec2 {
+        if self.node_type == NodeType::RootNode { return Vec2 { x: 0.0, y: 0.0 } };
+        self.length_angle_to_xy(stickfigure)
+    }
+
+    pub fn get_global_start(&self, stickfigure: &Stickfigure) -> Vec2 {
+        let ancestors = stickfigure.get_parents_recursive(self.get_draw_order_index());
+        let mut global_position = Vec2 {x: 0.0, y: 0.0 };
+        
+
+        ancestors.iter().for_each(|ancestor| {
+            if let Some(node) = stickfigure.get_node(*ancestor) {
+                let mut scale_factor = 1.0;
+                if node.borrow().use_segment_scale {
+                    scale_factor = self.scale;
+                }
+
+                global_position += node.borrow().get_local_position(stickfigure) * scale_factor;
+            }
+        });
+
+        global_position
+    }
+
+    pub fn get_global_end(&self, stickfigure: &Stickfigure) -> Vec2 {
+        let mut scale_factor = 1.0;
+        if self.use_segment_scale {
+            scale_factor = self.scale;
+        }
+
+        let global_start = self.get_global_start(stickfigure);
+
+        global_start + (self.get_local_position(stickfigure) * scale_factor)
+    }
+
+    pub fn get_display_color(&self, stickfigure: &Stickfigure) -> Color {
+        if !self.use_segment_color { return stickfigure.color }
+        else { return self.color }
+    }
+
+    pub fn get_thickness(&self) -> i32 {
+        let mut scale_factor = 1.0;
+
+        if self.use_segment_scale {
+            scale_factor = self.scale;
+        }
+
+        ((self.thickness as f32) * scale_factor) as i32
+    }
+
+    pub fn get_trapezoid_thickness_start(&self, stickfigure: &Stickfigure) -> f32 {
+        if stickfigure.version < 403 || stickfigure.build < 36 { return self.thickness as f32 }
+        if !self.use_trapezoid_thickness_start { return self.thickness as f32 }
+        self.trapezoid_thickness_start
+    }
+
+    pub fn get_trapezoid_thickness_end(&self, stickfigure: &Stickfigure) -> f32 {
+        if stickfigure.version < 403 || stickfigure.build < 36 { return (self.thickness as f32) * self.trapezoid_top_thickness_ratio }
+        if !self.use_trapezoid_thickness_end { return self.thickness as f32 }
+        self.trapezoid_thickness_end
+    }
+
+    fn length_angle_to_xy(&self, stickfigure: &Stickfigure) -> Vec2 {
         let length = self.length;
-        let angle_degrees = self.local_angle;
+        let angle_degrees = self.get_global_angle(stickfigure);
         let angle_radians = angle_degrees.to_radians();
         let x = length * libm::cosf(angle_radians);
         let y = length * libm::sinf(angle_radians);
-        (x, y)
+        Vec2 {x, y}
     }
 }
 
 #[repr(i8)]
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub enum NodeType {
     /// Should only be one RootNode per `Stickfigure`, and it should be the first node.
     RootNode = -1,

@@ -5,6 +5,8 @@ use alloc::{borrow::ToOwned, format, string::String};
 
 use crate::ColorError;
 
+use libm::{self, Libm};
+
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct Color {
     pub alpha: u8,
@@ -175,6 +177,14 @@ impl Color {
             self.red, self.green, self.blue, self.alpha
         )
     }
+
+    pub fn to_rgba_f32(self) -> [f32; 4] {
+        self.into()
+    }
+
+    pub fn from_rgba_f32(arr: [f32; 4]) -> Self {
+        arr.into()
+    }
 }
 
 /// Common color constants
@@ -263,6 +273,32 @@ impl From<u32> for Color {
             green,
             blue,
             alpha,
+        }
+    }
+}
+
+impl From<Color> for [f32; 4] {
+    fn from(c: Color) -> Self {
+        [
+            c.red as f32 / 255.0,
+            c.green as f32 / 255.0,
+            c.blue as f32 / 255.0,
+            c.alpha as f32 / 255.0,
+        ]
+    }
+}
+
+impl From<[f32; 4]> for Color {
+    fn from(arr: [f32; 4]) -> Self {
+        fn to_u8(v: f32) -> u8 {
+            Libm::<f32>::round(v.clamp(0.0, 1.0) * 255.0) as u8
+        }
+
+        Color {
+            red: to_u8(arr[0]),
+            green: to_u8(arr[1]),
+            blue: to_u8(arr[2]),
+            alpha: to_u8(arr[3]),
         }
     }
 }

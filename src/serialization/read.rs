@@ -54,7 +54,7 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
     let mut build = stickfigure.build;
 
     if version > Stickfigure::default().version || version < 160 {
-        reader.seek(SeekFrom::Start(0));
+        reader.seek(SeekFrom::Start(0)).or_else(|err| return Err(StickfigureError::Io(err)))?;
         let mut compressed = Vec::new();
         reader.read_to_end(&mut compressed).map_err(StickfigureError::Io)?;
 
@@ -372,8 +372,8 @@ fn read_node<E: ByteOrder>(
         }
     }
     if version >= 403 && build == 36 {
-        reader.read_i32::<E>();
-        reader.read_i32::<E>();
+        reader.read_i32::<E>().or_else(|err| return Err(StickfigureError::Io(err)))?;
+        reader.read_i32::<E>().or_else(|err| return Err(StickfigureError::Io(err)))?;
         node.use_trapezoid_thickness_start = reader
             .read_u8()
             .or_else(|err| return Err(StickfigureError::Io(err)))?
@@ -475,7 +475,7 @@ fn read_node<E: ByteOrder>(
         }
     }
     if version >= 403 && (build >= 39 && build <= 50) {
-        reader.read_f32::<E>();
+        reader.read_f32::<E>().or_else(|err| return Err(StickfigureError::Io(err)))?;
     }
     if version >= 403 && build >= 51 {
         node.angle_lock_is_main_node = reader
@@ -528,7 +528,7 @@ fn read_node<E: ByteOrder>(
         }
     }
     if version >= 403 && (build >= 41 && build <= 45) {
-        reader.read_i16::<E>();
+        reader.read_i16::<E>().or_else(|err| return Err(StickfigureError::Io(err)))?;
     }
     if version >= 403 && build >= 46 {
         node.drag_lock_angle = reader
@@ -542,7 +542,7 @@ fn read_node<E: ByteOrder>(
             .or_else(|err| return Err(StickfigureError::Io(err)))?;
     }
     if version >= 403 && (build >= 41 && build <= 45) {
-        reader.read_u8();
+        reader.read_u8().or_else(|err| return Err(StickfigureError::Io(err)))?;
     }
     let number_of_child_nodes = reader
         .read_i32::<E>()
