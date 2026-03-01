@@ -25,8 +25,20 @@ use crate::Polyfill;
 use crate::StickfigureError;
 
 const NODE_LIMIT: usize = 400;
+
+#[cfg(feature = "tryreadanyway")]
+pub const SUPPORTED_APP_VERSION: i32 = 9999999;
+
+#[cfg(feature = "tryreadanyway")]
+pub const SUPPORTED_APP_BUILD: i32 = 9999999;
+
+
+#[cfg(not(feature = "tryreadanyway"))]
 pub const SUPPORTED_APP_VERSION: i32 = 423;
+
+#[cfg(not(feature = "tryreadanyway"))]
 pub const SUPPORTED_APP_BUILD: i32 = 72;
+
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord, Default)]
 #[serde(transparent)]

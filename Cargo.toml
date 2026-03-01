@@ -14,6 +14,7 @@ maintenance = { status = "passively-maintained" }
 [features]
 default = []
 std = []
+tryreadanyway = []
 
 [dependencies]
 byteorder-core2 = { version="1.5.0-core2", default-features = false }
