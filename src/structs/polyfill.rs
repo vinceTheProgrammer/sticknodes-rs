@@ -1,9 +1,8 @@
 use glam::Vec2;
-use hashbrown::HashSet;
+use std::collections::HashSet;
 use serde::Deserialize;
 use serde::Serialize;
-extern crate alloc;
-use alloc::{format, vec::Vec};
+use std::{format, vec::Vec};
 
 use crate::{color::Color, Stickfigure, StickfigureError};
 

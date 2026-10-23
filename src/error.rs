@@ -1,7 +1,6 @@
-use no_std_io2::io;
+use std::io;
 use thiserror::Error;
-extern crate alloc;
-use alloc::string::String;
+use std::string::String;
 
 #[derive(Error, Debug)]
 pub enum LibraryError {

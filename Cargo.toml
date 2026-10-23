@@ -3,7 +3,7 @@ name = "sticknodes-rs"
 version = "4.0.0-alpha"
 description = "Unofficial Stick Nodes asset manipulation library. Currently only supports Stickfigures. Currently only supports assets up to version 4.1.0 build 21."
 keywords = ["stick", "nodes", "asset", "read", "write"]
-categories = ["no-std", "parser-implementations"]
+categories = ["parser-implementations"]
 repository = "https://github.com/vinceTheProgrammer/sticknodes-rs"
 license = "MIT"
 edition = "2021"
@@ -13,16 +13,13 @@ maintenance = { status = "passively-maintained" }
 
 [features]
 default = []
-std = []
 tryreadanyway = []
 
 [dependencies]
-byteorder-no_std_io2 = { path = "../byteorder-no_std_io2/", default-features = false }
-no_std_io2 = { version = "0.9.4", default-features = false, features = ["alloc"] }
+byteorder = "1.5"
 hashbrown = { version = "0.15.2", features = ["serde"] }
-libm = "0.2.15"
-miniz_oxide = { version = "0.8.8", default-features = false, features = ["with-alloc"] }
-petgraph = { version = "0.8.1", default-features = false, features = ["serde-1"]}
-serde = { version = "1.0.219", default-features = false, features = ["derive", "alloc"] }
-thiserror = { version = "2.0.12", default-features = false }
-glam = { version = "0.32.0", default-features = false, features = ["libm"] }
+miniz_oxide = { version = "0.8.8", features = ["with-alloc"] }
+petgraph = { version = "0.8.1", features = ["serde-1"] }
+serde = { version = "1.0.219", features = ["derive"] }
+thiserror = "2.0.12"
+glam = "0.32.0"

@@ -1,7 +1,6 @@
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
-use no_std_io2::io::{self, Read, Seek, SeekFrom};
-extern crate alloc;
-use alloc::{rc::Rc, vec::Vec, vec, format};
+use std::io::{self, Read, Seek, SeekFrom};
+use std::{rc::Rc, vec::Vec, vec, format};
 use miniz_oxide::inflate::decompress_to_vec_zlib;
 
 use core::{cell::RefCell};

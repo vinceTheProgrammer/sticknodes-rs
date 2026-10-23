@@ -1,11 +1,8 @@
 use serde::Deserialize;
 use serde::Serialize;
-extern crate alloc;
-use alloc::{borrow::ToOwned, format, string::String};
+use std::{borrow::ToOwned, format, string::String};
 
 use crate::ColorError;
-
-use libm::{self, Libm};
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct Color {
@@ -233,7 +230,6 @@ impl Color {
     };
 }
 
-#[cfg(feature = "std")]
 impl std::fmt::Display for Color {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -291,7 +287,7 @@ impl From<Color> for [f32; 4] {
 impl From<[f32; 4]> for Color {
     fn from(arr: [f32; 4]) -> Self {
         fn to_u8(v: f32) -> u8 {
-            Libm::<f32>::round(v.clamp(0.0, 1.0) * 255.0) as u8
+            (v.clamp(0.0, 1.0) * 255.0).round() as u8
         }
 
         Color {

@@ -1,9 +1,9 @@
 use core::cell::RefCell;
 
-use no_std_io2::io::Cursor;
-use no_std_io2::io::Read;
-use no_std_io2::io::Seek;
-use hashbrown::HashMap;
+use std::io::Cursor;
+use std::io::Read;
+use std::io::Seek;
+use std::collections::HashMap;
 use petgraph::graph::NodeIndex;
 use petgraph::visit::Dfs;
 use petgraph::visit::EdgeRef;
@@ -11,8 +11,7 @@ use petgraph::visit::VisitMap;
 use petgraph::visit::Visitable;
 use petgraph::Direction;
 use petgraph::Graph;
-extern crate alloc;
-use alloc::{format, rc::Rc, vec, vec::Vec};
+use std::{format, rc::Rc, vec, vec::Vec};
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -32,13 +31,11 @@ pub const SUPPORTED_APP_VERSION: i32 = 9999999;
 #[cfg(feature = "tryreadanyway")]
 pub const SUPPORTED_APP_BUILD: i32 = 9999999;
 
-
 #[cfg(not(feature = "tryreadanyway"))]
 pub const SUPPORTED_APP_VERSION: i32 = 423;
 
 #[cfg(not(feature = "tryreadanyway"))]
 pub const SUPPORTED_APP_BUILD: i32 = 72;
-
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord, Default)]
 #[serde(transparent)]

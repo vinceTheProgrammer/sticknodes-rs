@@ -1,5 +1,5 @@
 use glam::Vec2;
-use libm::{self, Libm};
+
 use petgraph::graph::NodeIndex;
 use petgraph::Graph;
 use serde::Deserialize;
@@ -12,8 +12,7 @@ use super::connector::ConnectorData;
 use super::stickfigure::DrawOrderIndex;
 
 use core::cell::RefCell;
-extern crate alloc;
-use alloc::{rc::Rc, vec::Vec};
+use std::{rc::Rc, vec::Vec};
 
 #[derive(Debug, Clone)]
 pub struct Node {
@@ -559,7 +558,7 @@ impl Node {
     
         let local_end = target_global_end - parent_global_start;
 
-        let angle = Libm::<f32>::atan2(local_end.y, local_end.x).to_degrees();
+        let angle = local_end.y.atan2(local_end.x).to_degrees();
 
         self.set_global_angle(stickfigure, angle);
         self.length = local_end.length();
@@ -600,8 +599,8 @@ impl Node {
         let length = self.length;
         let angle_degrees = self.get_global_angle(stickfigure);
         let angle_radians = angle_degrees.to_radians();
-        let x = length * libm::cosf(angle_radians);
-        let y = length * libm::sinf(angle_radians);
+        let x = length * angle_radians.cos();
+        let y = length * angle_radians.sin();
         Vec2 {x, y}
     }
 }

@@ -1,9 +1,8 @@
 use core::cell::RefCell;
 
 use byteorder::{BigEndian, WriteBytesExt};
-use no_std_io2::io::{Cursor, Write};
-extern crate alloc;
-use alloc::{format, rc::Rc, vec, vec::Vec};
+use std::io::{Cursor, Write};
+use std::{format, rc::Rc, vec, vec::Vec};
 
 use crate::{
     error::*,
