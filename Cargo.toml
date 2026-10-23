@@ -31,5 +31,4 @@ unused_variables = "deny"
 missing_docs = "warn"
 
 [lints.clippy]
-all = "warn"
 pedantic = "warn"

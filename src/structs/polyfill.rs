@@ -144,7 +144,8 @@ impl Polyfill {
         if !missing_indices.is_empty() {
             return Err(StickfigureError::InvalidDrawIndices(
                 format!("{missing_indices:?}"),
-                "Cannot insert attached node draw indices that include invalid draw order indices.".to_string(),
+                "Cannot insert attached node draw indices that include invalid draw order indices."
+                    .to_string(),
             ));
         }
 
@@ -175,7 +176,8 @@ impl Polyfill {
         if !missing_indices.is_empty() {
             return Err(StickfigureError::InvalidDrawIndices(
                 format!("{missing_indices:?}"),
-                "Cannot insert attached node draw indices that include invalid draw order indices.".to_string(),
+                "Cannot insert attached node draw indices that include invalid draw order indices."
+                    .to_string(),
             ));
         }
 
@@ -205,13 +207,15 @@ impl Polyfill {
         if !missing_indices.is_empty() {
             return Err(StickfigureError::InvalidDrawIndices(
                 format!("{missing_indices:?}"),
-                "Cannot remove attached node draw indices that include invalid draw order indices.".to_string(),
+                "Cannot remove attached node draw indices that include invalid draw order indices."
+                    .to_string(),
             ));
         }
 
         let indices: Vec<DrawOrderIndex> = self
             .attached_node_draw_indices
-            .iter().copied()
+            .iter()
+            .copied()
             .filter(|draw_index| !draw_indices.contains(draw_index))
             .collect();
 
@@ -228,7 +232,8 @@ impl Polyfill {
         let missing_indices = stickfigure.missing_draw_indices(&draw_indices);
 
         let valid_indices = draw_indices
-            .iter().copied()
+            .iter()
+            .copied()
             .filter(|index| !missing_indices.contains(index))
             .collect();
 
@@ -283,13 +288,15 @@ impl Polyfill {
         let missing_indices = stickfigure.missing_draw_indices(&draw_indices);
 
         let valid_indices: Vec<DrawOrderIndex> = draw_indices
-            .iter().copied()
+            .iter()
+            .copied()
             .filter(|index| !missing_indices.contains(index))
             .collect();
 
         let indices: Vec<DrawOrderIndex> = self
             .attached_node_draw_indices
-            .iter().copied()
+            .iter()
+            .copied()
             .filter(|draw_index| !valid_indices.contains(draw_index))
             .collect();
 

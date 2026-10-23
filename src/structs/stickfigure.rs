@@ -15,7 +15,7 @@ use std::{rc::Rc, vec, vec::Vec};
 
 use crate::serialization::read::read_stickfigure;
 use crate::serialization::write::write_stickfigure;
-use crate::structs::node::{Node, SerializableNode, NodeType};
+use crate::structs::node::{Node, NodeType, SerializableNode};
 use crate::Color;
 use crate::LibraryError;
 use crate::Polyfill;
@@ -359,8 +359,6 @@ impl Stickfigure {
             .neighbors_directed(parent_node_index, petgraph::Direction::Outgoing)
             .collect();
 
-        
-
         self.draw_order_indices_from_node_indices(&child_node_indices)
     }
 
@@ -444,8 +442,6 @@ impl Stickfigure {
             }
         }
 
-        
-
         self.draw_order_indices_from_node_indices(&siblings)
     }
 
@@ -464,8 +460,6 @@ impl Stickfigure {
                 }
             })
             .collect();
-
-        
 
         self.draw_order_indices_from_node_indices(&node_indices)
     }
@@ -695,14 +689,13 @@ impl Stickfigure {
         number_of_nodes_being_added: usize,
     ) -> Result<(), StickfigureError> {
         let node_count = self.nodes.node_count();
-        if self.is_node_limit_enabled
-            && node_count >= NODE_LIMIT {
-                return Err(StickfigureError::NodeLimitError(
-                    number_of_nodes_being_added,
-                    node_count,
-                    NODE_LIMIT,
-                ));
-            }
+        if self.is_node_limit_enabled && node_count >= NODE_LIMIT {
+            return Err(StickfigureError::NodeLimitError(
+                number_of_nodes_being_added,
+                node_count,
+                NODE_LIMIT,
+            ));
+        }
         Ok(())
     }
 }
