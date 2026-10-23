@@ -539,7 +539,7 @@ impl Node {
         let ancestors = stickfigure.get_parents_recursive(self.get_draw_order_index());
         let mut global_position = Vec2 { x: 0.0, y: 0.0 };
 
-        for ancestor in ancestors.iter() {
+        for ancestor in &ancestors {
             if let Some(node) = stickfigure.get_node(*ancestor) {
                 let mut scale_factor = 1.0;
                 if node.borrow().use_segment_scale {
