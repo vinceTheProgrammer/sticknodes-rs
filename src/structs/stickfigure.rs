@@ -11,11 +11,11 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::io::Cursor;
-use std::{format, rc::Rc, vec, vec::Vec};
+use std::{rc::Rc, vec, vec::Vec};
 
 use crate::serialization::read::read_stickfigure;
 use crate::serialization::write::write_stickfigure;
-use crate::structs::node::*;
+use crate::structs::node::{Node, SerializableNode, NodeType};
 use crate::Color;
 use crate::LibraryError;
 use crate::Polyfill;
@@ -43,9 +43,9 @@ pub struct DrawOrderIndex(pub i32);
 
 pub struct IWillNotAbuseUnlimitedNodes(pub bool);
 
-impl Into<DrawOrderIndex> for i32 {
-    fn into(self) -> DrawOrderIndex {
-        DrawOrderIndex(self)
+impl From<i32> for DrawOrderIndex {
+    fn from(val: i32) -> Self {
+        DrawOrderIndex(val)
     }
 }
 
@@ -100,6 +100,7 @@ impl Default for Stickfigure {
 /// Public Methods
 impl Stickfigure {
     /// Creates a new, empty `Stickfigure`, set to latest version and build.
+    #[must_use]
     pub fn new() -> Self {
         let mut stickfigure = Stickfigure::default();
         stickfigure.add_root_node();
@@ -124,6 +125,7 @@ impl Stickfigure {
         Ok(stickfigure)
     }
 
+    #[must_use]
     pub fn to_serializable(&self) -> SerializableStickfigure {
         let root_node =self.get_node(DrawOrderIndex(0)).expect("Possibly an internal bug, but please check if the stickfigure you're trying to serialize has its root node draw order index set as 0. If it is, this is probably a library bug. If it is not 0, then that might be on your end :p");
         let mut nodes = Vec::new();
@@ -142,7 +144,7 @@ impl Stickfigure {
             build: self.build,
             scale: self.scale,
             color: self.color,
-            nodes: nodes,
+            nodes,
             polyfills: serializable_polyfills,
         }
     }
@@ -248,7 +250,7 @@ impl Stickfigure {
         if !self.node_index_map.contains_key(&draw_index) {
             return Err(StickfigureError::InvalidDrawIndex(
                 draw_index.0,
-                format!("Not attempting to change any indices."),
+                "Not attempting to change any indices.".to_string(),
             ));
         }
 
@@ -260,18 +262,18 @@ impl Stickfigure {
                 .iter()
                 .filter(|(_, &draw_index)| draw_index.0 >= new_draw_index.0)
                 .map(|(&node_index, &draw_index)| NodeIndices {
-                    node_index,
                     draw_index,
+                    node_index,
                 })
                 .collect();
 
             affected_nodes.sort_by_key(|node_indices| node_indices.draw_index.0);
 
-            for indices in affected_nodes.iter_mut() {
+            for indices in &mut affected_nodes {
                 let draw_index_ = {
                     let node = self.nodes.node_weight(indices.node_index).expect("This node index was retrieved from the node_index_map, so it should be valid, but apparently is not - bug in library logic");
 
-                    Node::update(&node, |n| {
+                    Node::update(node, |n| {
                         n.draw_order_index.0 += 1;
                     });
 
@@ -284,7 +286,7 @@ impl Stickfigure {
         }
 
         let node = self.nodes.node_weight(node_index).expect("Earlier in this method call the draw order index was evaluated to be valid, which means its associated node index must exist, but apparently does not - bug in library logic");
-        Node::update(&node, |n| {
+        Node::update(node, |n| {
             n.draw_order_index = new_draw_index;
         });
 
@@ -303,6 +305,7 @@ impl Stickfigure {
     /// # Returns
     ///
     /// An `Option` containing a reference to the node if it exists.
+    #[must_use]
     pub fn get_node(&self, draw_index: DrawOrderIndex) -> Option<&Rc<RefCell<Node>>> {
         if !self.node_index_map.contains_key(&draw_index) {
             return None;
@@ -329,6 +332,7 @@ impl Stickfigure {
     // }
 
     /// Get the `DrawOrderIndex` of the direct parent of the `Node` at the specified `DrawOrderIndex`.
+    #[must_use]
     pub fn get_parent(&self, draw_index: DrawOrderIndex) -> Option<DrawOrderIndex> {
         let child_node_index = self.node_index_from_draw_order(draw_index);
 
@@ -346,6 +350,7 @@ impl Stickfigure {
     }
 
     /// Get a `Vec<DrawOrderIndex>` containing all `DrawOrderIndex`s of `Node`s that are direct children of the `Node` at the specified `DrawOrderIndex`.
+    #[must_use]
     pub fn get_children(&self, parent_draw_index: DrawOrderIndex) -> Vec<DrawOrderIndex> {
         let parent_node_index = self.node_index_from_draw_order(parent_draw_index);
 
@@ -354,11 +359,12 @@ impl Stickfigure {
             .neighbors_directed(parent_node_index, petgraph::Direction::Outgoing)
             .collect();
 
-        let child_draw_indices = self.draw_order_indices_from_node_indices(&child_node_indices);
+        
 
-        child_draw_indices
+        self.draw_order_indices_from_node_indices(&child_node_indices)
     }
 
+    #[must_use]
     pub fn get_children_recursive(&self, draw_index: DrawOrderIndex) -> Vec<DrawOrderIndex> {
         let node_index = self.node_index_from_draw_order(draw_index);
         let mut children = Vec::new();
@@ -373,6 +379,7 @@ impl Stickfigure {
         self.draw_order_indices_from_node_indices(&children)
     }
 
+    #[must_use]
     pub fn get_parents_recursive(&self, draw_index: DrawOrderIndex) -> Vec<DrawOrderIndex> {
         let start = self.node_index_from_draw_order(draw_index);
         let mut ancestors = Vec::new();
@@ -399,6 +406,7 @@ impl Stickfigure {
         self.draw_order_indices_from_node_indices(&ancestors)
     }
 
+    #[must_use]
     pub fn get_all_node_indices(&self) -> Vec<DrawOrderIndex> {
         let indices: Vec<NodeIndex> = self.nodes.node_indices().collect();
 
@@ -416,6 +424,7 @@ impl Stickfigure {
     /// # Returns
     ///
     /// A `Vec` of `DrawOrderIndex` representing the siblings of the given node.
+    #[must_use]
     pub fn get_siblings(&self, draw_index: DrawOrderIndex) -> Vec<DrawOrderIndex> {
         let mut siblings = Vec::new();
         let mut parents = Vec::new();
@@ -435,9 +444,9 @@ impl Stickfigure {
             }
         }
 
-        let siblings_draw_indices = self.draw_order_indices_from_node_indices(&siblings);
+        
 
-        siblings_draw_indices
+        self.draw_order_indices_from_node_indices(&siblings)
     }
 
     pub fn get_nodes_with_property<F>(&self, mut predicate: F) -> Vec<DrawOrderIndex>
@@ -456,9 +465,9 @@ impl Stickfigure {
             })
             .collect();
 
-        let draw_indices = self.draw_order_indices_from_node_indices(&node_indices);
+        
 
-        draw_indices
+        self.draw_order_indices_from_node_indices(&node_indices)
     }
 
     pub fn update_nodes_with_property<F>(&mut self, mut predicate: F, mut updater: F)
@@ -477,7 +486,7 @@ impl Stickfigure {
         if !self.node_index_map.contains_key(&draw_index) {
             return Err(StickfigureError::InvalidDrawIndex(
                 draw_index.0,
-                format!("Cancelling node removal."),
+                "Cancelling node removal.".to_string(),
             ));
         }
         let node_index = self.node_index_from_draw_order(draw_index);
@@ -485,7 +494,7 @@ impl Stickfigure {
         if let Some(parent_draw_index) = self.get_parent(draw_index) {
             let child_draw_indices: Vec<DrawOrderIndex> = self.get_children(draw_index);
 
-            for child_draw_index in child_draw_indices.iter() {
+            for child_draw_index in &child_draw_indices {
                 self.add_edge(parent_draw_index, *child_draw_index);
             }
         }
@@ -505,6 +514,7 @@ impl Stickfigure {
         draw_index
     }
 
+    #[must_use]
     pub fn get_polyfill(&self, draw_index: DrawOrderIndex) -> Option<Rc<RefCell<Polyfill>>> {
         if let Some(polyfill) = self
             .polyfills
@@ -524,7 +534,7 @@ impl Stickfigure {
         let rc_polyfills: Vec<Rc<RefCell<Polyfill>>> = self
             .polyfills
             .iter()
-            .map(|rc_poly| Rc::clone(rc_poly))
+            .map(Rc::clone)
             .filter(|polyfill| polyfill.borrow().anchor_node_draw_index != anchor_draw_order)
             .collect();
 
@@ -538,7 +548,7 @@ impl Stickfigure {
                 self.polyfill_anchors.remove(index);
             },
             None => {
-                return Err(StickfigureError::InvalidDrawIndex(anchor_draw_order.0, format!("Anchor node draw index not found in internal polyfill_anchors Vec. Likely some kind of logical error. Cancelling polyfill removal.")))
+                return Err(StickfigureError::InvalidDrawIndex(anchor_draw_order.0, "Anchor node draw index not found in internal polyfill_anchors Vec. Likely some kind of logical error. Cancelling polyfill removal.".to_string()))
             },
         }
 
@@ -546,28 +556,32 @@ impl Stickfigure {
         Ok(())
     }
 
-    /// Returns true if all provided DrawOrderIndices exist in the node_index_map.
+    /// Returns true if all provided `DrawOrderIndices` exist in the `node_index_map`.
+    #[must_use]
     pub fn all_draw_indices_exist(&self, indices: &[DrawOrderIndex]) -> bool {
         indices
             .iter()
             .all(|index| self.node_index_map.contains_key(index))
     }
 
-    /// Returns true if provided DrawOrderIndex exists in the node_index_map.
+    /// Returns true if provided `DrawOrderIndex` exists in the `node_index_map`.
+    #[must_use]
     pub fn draw_index_exists(&self, draw_index: DrawOrderIndex) -> bool {
         self.node_index_map.contains_key(&draw_index)
     }
 
+    #[must_use]
     pub fn draw_index_is_polyfill_anchor(&self, draw_index: DrawOrderIndex) -> bool {
         self.polyfill_anchors.contains(&draw_index)
     }
 
-    /// Returns a Vec of DrawOrderIndices that do not exist in node_index_map.
+    /// Returns a Vec of `DrawOrderIndices` that do not exist in `node_index_map`.
+    #[must_use]
     pub fn missing_draw_indices(&self, indices: &[DrawOrderIndex]) -> Vec<DrawOrderIndex> {
         indices
             .iter()
             .filter(|index| !self.node_index_map.contains_key(*index))
-            .cloned()
+            .copied()
             .collect()
     }
 }
@@ -581,7 +595,7 @@ impl Stickfigure {
         draw_index: DrawOrderIndex,
     ) -> Result<NodeIndices, StickfigureError> {
         if self.node_index_map.contains_key(&draw_index) {
-            return Err(StickfigureError::OccupiedDrawIndex(draw_index.0 ,format!("add_node_at_unique_index will not attempt to shift indices. This is likely being called while reading a stickfigure file. If that's the case, the file likely has duplicate draw order indices. If that's not the case or the file has all unique draw order indices, then there's a bug with the library.")).into());
+            return Err(StickfigureError::OccupiedDrawIndex(draw_index.0 ,"add_node_at_unique_index will not attempt to shift indices. This is likely being called while reading a stickfigure file. If that's the case, the file likely has duplicate draw order indices. If that's not the case or the file has all unique draw order indices, then there's a bug with the library.".to_string()));
         }
 
         let rc_node = Rc::new(RefCell::new(node));
@@ -613,7 +627,7 @@ impl Stickfigure {
         self.nodes.add_edge(parent_node_index, child_node_index, ());
     }
 
-    /// Converts NodeIndex to DrawOrderIndex in O(1) time
+    /// Converts `NodeIndex` to `DrawOrderIndex` in O(1) time
     pub(crate) fn draw_order_from_node_index(&self, node_index: NodeIndex) -> DrawOrderIndex {
         self.draw_index_map
             .get(&node_index)
@@ -631,7 +645,7 @@ impl Stickfigure {
             .collect()
     }
 
-    /// Converts DrawOrderIndex to NodeIndex in O(1) time
+    /// Converts `DrawOrderIndex` to `NodeIndex` in O(1) time
     pub(crate) fn node_index_from_draw_order(&self, draw_index: DrawOrderIndex) -> NodeIndex {
         self.node_index_map
             .get(&draw_index)
@@ -681,15 +695,14 @@ impl Stickfigure {
         number_of_nodes_being_added: usize,
     ) -> Result<(), StickfigureError> {
         let node_count = self.nodes.node_count();
-        if self.is_node_limit_enabled {
-            if node_count >= NODE_LIMIT {
+        if self.is_node_limit_enabled
+            && node_count >= NODE_LIMIT {
                 return Err(StickfigureError::NodeLimitError(
                     number_of_nodes_being_added,
                     node_count,
                     NODE_LIMIT,
                 ));
             }
-        }
         Ok(())
     }
 }

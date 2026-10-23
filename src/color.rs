@@ -14,16 +14,18 @@ pub struct Color {
 
 impl Color {
     /// Creates a new color from RGBA values.
+    #[must_use]
     pub fn from_rgba(red: u8, green: u8, blue: u8, alpha: u8) -> Self {
         Color {
-            red,
-            green,
-            blue,
             alpha,
+            blue,
+            green,
+            red,
         }
     }
 
     /// Creates a new color from RGB values (assumes alpha is 255).
+    #[must_use]
     pub fn from_rgb(red: u8, green: u8, blue: u8) -> Self {
         Color {
             red,
@@ -36,30 +38,30 @@ impl Color {
     /// Creates a new color from a hex string.
     /// The string can be in the formats: "#RGB", "#RGBA", "#RRGGBB", "#RRGGBBAA", "RGB", "RGBA", "RRGGBB", or "RRGGBBAA" (case-insensitive). Any other format will fail.
     pub fn from_hex(hex: &str) -> Result<Self, ColorError> {
-        if hex.len() == 0 {
+        if hex.is_empty() {
             return Err(ColorError::EmptyHexString());
         }
 
         let trimmed_hex = hex.trim_start_matches('#');
 
         match trimmed_hex.len() {
-            0 => return Err(ColorError::EmptyTrimmedHexString()),
+            0 => Err(ColorError::EmptyTrimmedHexString()),
             3 => {
                 let red = u8::from_str_radix(&trimmed_hex[0..1], 16).map_err(|_| {
                     ColorError::InvalidHexStringValue(
-                        format!("#{}", trimmed_hex),
+                        format!("#{trimmed_hex}"),
                         trimmed_hex[0..1].to_owned(),
                     )
                 })? * 17; // multiply by 17 to turn value of single hex digit to the value of if it was repeated, ex: "f" -> "ff"
                 let green = u8::from_str_radix(&trimmed_hex[1..2], 16).map_err(|_| {
                     ColorError::InvalidHexStringValue(
-                        format!("#{}", trimmed_hex),
+                        format!("#{trimmed_hex}"),
                         trimmed_hex[1..2].to_owned(),
                     )
                 })? * 17;
                 let blue = u8::from_str_radix(&trimmed_hex[2..3], 16).map_err(|_| {
                     ColorError::InvalidHexStringValue(
-                        format!("#{}", trimmed_hex),
+                        format!("#{trimmed_hex}"),
                         trimmed_hex[2..3].to_owned(),
                     )
                 })? * 17;
@@ -73,51 +75,51 @@ impl Color {
             4 => {
                 let red = u8::from_str_radix(&trimmed_hex[0..1], 16).map_err(|_| {
                     ColorError::InvalidHexStringValue(
-                        format!("#{}", trimmed_hex),
+                        format!("#{trimmed_hex}"),
                         trimmed_hex[0..1].to_owned(),
                     )
                 })? * 17;
                 let green = u8::from_str_radix(&trimmed_hex[1..2], 16).map_err(|_| {
                     ColorError::InvalidHexStringValue(
-                        format!("#{}", trimmed_hex),
+                        format!("#{trimmed_hex}"),
                         trimmed_hex[1..2].to_owned(),
                     )
                 })? * 17;
                 let blue = u8::from_str_radix(&trimmed_hex[2..3], 16).map_err(|_| {
                     ColorError::InvalidHexStringValue(
-                        format!("#{}", trimmed_hex),
+                        format!("#{trimmed_hex}"),
                         trimmed_hex[2..3].to_owned(),
                     )
                 })? * 17;
                 let alpha = u8::from_str_radix(&trimmed_hex[3..4], 16).map_err(|_| {
                     ColorError::InvalidHexStringValue(
-                        format!("#{}", trimmed_hex),
+                        format!("#{trimmed_hex}"),
                         trimmed_hex[3..4].to_owned(),
                     )
                 })? * 17;
                 Ok(Color {
-                    red,
-                    green,
-                    blue,
                     alpha,
+                    blue,
+                    green,
+                    red,
                 })
             }
             6 => {
                 let red = u8::from_str_radix(&trimmed_hex[0..2], 16).map_err(|_| {
                     ColorError::InvalidHexStringValue(
-                        format!("#{}", trimmed_hex),
+                        format!("#{trimmed_hex}"),
                         trimmed_hex[0..2].to_owned(),
                     )
                 })?;
                 let green = u8::from_str_radix(&trimmed_hex[2..4], 16).map_err(|_| {
                     ColorError::InvalidHexStringValue(
-                        format!("#{}", trimmed_hex),
+                        format!("#{trimmed_hex}"),
                         trimmed_hex[2..4].to_owned(),
                     )
                 })?;
                 let blue = u8::from_str_radix(&trimmed_hex[4..6], 16).map_err(|_| {
                     ColorError::InvalidHexStringValue(
-                        format!("#{}", trimmed_hex),
+                        format!("#{trimmed_hex}"),
                         trimmed_hex[4..6].to_owned(),
                     )
                 })?;
@@ -131,33 +133,33 @@ impl Color {
             8 => {
                 let red = u8::from_str_radix(&trimmed_hex[0..2], 16).map_err(|_| {
                     ColorError::InvalidHexStringValue(
-                        format!("#{}", trimmed_hex),
+                        format!("#{trimmed_hex}"),
                         trimmed_hex[0..2].to_owned(),
                     )
                 })?;
                 let green = u8::from_str_radix(&trimmed_hex[2..4], 16).map_err(|_| {
                     ColorError::InvalidHexStringValue(
-                        format!("#{}", trimmed_hex),
+                        format!("#{trimmed_hex}"),
                         trimmed_hex[2..4].to_owned(),
                     )
                 })?;
                 let blue = u8::from_str_radix(&trimmed_hex[4..6], 16).map_err(|_| {
                     ColorError::InvalidHexStringValue(
-                        format!("#{}", trimmed_hex),
+                        format!("#{trimmed_hex}"),
                         trimmed_hex[4..6].to_owned(),
                     )
                 })?;
                 let alpha = u8::from_str_radix(&trimmed_hex[6..8], 16).map_err(|_| {
                     ColorError::InvalidHexStringValue(
-                        format!("#{}", trimmed_hex),
+                        format!("#{trimmed_hex}"),
                         trimmed_hex[6..8].to_owned(),
                     )
                 })?;
                 Ok(Color {
-                    red,
-                    green,
-                    blue,
                     alpha,
+                    blue,
+                    green,
+                    red,
                 })
             }
             _ => Err(ColorError::InvalidHexStringLength(
@@ -168,6 +170,7 @@ impl Color {
     }
 
     /// Converts the color to a hex string.
+    #[must_use]
     pub fn to_hex(&self) -> String {
         format!(
             "#{:02X}{:02X}{:02X}{:02X}",
@@ -175,10 +178,12 @@ impl Color {
         )
     }
 
+    #[must_use]
     pub fn to_rgba_f32(self) -> [f32; 4] {
         self.into()
     }
 
+    #[must_use]
     pub fn from_rgba_f32(arr: [f32; 4]) -> Self {
         arr.into()
     }
@@ -265,10 +270,10 @@ impl From<u32> for Color {
         let blue = ((hex >> 8) & 0xFF) as u8;
         let alpha = (hex & 0xFF) as u8;
         Color {
-            red,
-            green,
-            blue,
             alpha,
+            blue,
+            green,
+            red,
         }
     }
 }
@@ -276,10 +281,10 @@ impl From<u32> for Color {
 impl From<Color> for [f32; 4] {
     fn from(c: Color) -> Self {
         [
-            c.red as f32 / 255.0,
-            c.green as f32 / 255.0,
-            c.blue as f32 / 255.0,
-            c.alpha as f32 / 255.0,
+            f32::from(c.red) / 255.0,
+            f32::from(c.green) / 255.0,
+            f32::from(c.blue) / 255.0,
+            f32::from(c.alpha) / 255.0,
         ]
     }
 }

@@ -50,10 +50,10 @@ pub struct Node {
     pub(crate) trapezoid_thickness_start: f32, // trapezoid_thickness_1
     /// Thickness of the end of the trapezoid node (the end furthest from its parent node).
     pub(crate) trapezoid_thickness_end: f32, // trapezoid_thickness_2
-    /// Whether the start thickness should be equal to trapezoid_thickness_start. If false, start thickness will equal node thickness.
+    /// Whether the start thickness should be equal to `trapezoid_thickness_start`. If false, start thickness will equal node thickness.
     /// Only has effect specifically for Stick Nodes build 36. Otherwise, this property does nothing.
     pub(crate) use_trapezoid_thickness_start: bool, // use_trapezoid_thickness_1
-    /// Whether the end thickness should be equal to trapezoid_thickness_end. If false, end thickness will equal node thickness.
+    /// Whether the end thickness should be equal to `trapezoid_thickness_end`. If false, end thickness will equal node thickness.
     /// Only has effect specifically for Stick Nodes build 36. Otherwise, this property does nothing.
     pub(crate) use_trapezoid_thickness_end: bool, // use_trapezoid_thickness_2
     pub(crate) trapezoid_top_thickness_ratio: f32,
@@ -299,17 +299,19 @@ impl Default for NodeOptions {
 
 impl Node {
     /// Creates a new, empty `Node`.
+    #[must_use]
     pub fn new() -> Self {
         Node::default()
     }
 
+    #[must_use]
     pub fn from_options(options: NodeOptions) -> Self {
         let mut node_type = options.node_type.clone();
         if options.node_type.to_integer() == NodeType::RootNode.to_integer() {
             node_type = NodeType::RoundedSegment;
         }
         Self {
-            node_type: node_type,
+            node_type,
             is_static: options.is_static,
             is_stretchy: options.is_stretchy,
             is_smart_stretch: options.is_smart_stretch,
@@ -358,6 +360,7 @@ impl Node {
         }
     }
 
+    #[must_use]
     pub fn to_options(&self) -> NodeOptions {
         NodeOptions {
             node_type: self.node_type.clone(),
@@ -409,6 +412,7 @@ impl Node {
         }
     }
 
+    #[must_use]
     pub fn build_serializable_tree(
         &self,
         graph: &Graph<Rc<RefCell<Node>>, ()>,
@@ -473,8 +477,9 @@ impl Node {
         }
     }
 
+    #[must_use]
     pub fn get_draw_order_index(&self) -> DrawOrderIndex {
-        return self.draw_order_index;
+        self.draw_order_index
     }
 
     pub fn update<F>(rc_node: &Rc<RefCell<Self>>, f: F)
@@ -482,9 +487,10 @@ impl Node {
         F: FnOnce(&mut Self),
     {
         let mut inner = rc_node.borrow_mut();
-        f(&mut *inner);
+        f(&mut inner);
     }
 
+    #[must_use]
     pub fn get_global_angle(&self, stickfigure: &Stickfigure) -> f32 {
         let ancestors = stickfigure.get_parents_recursive(self.get_draw_order_index());
         let mut global_angle = 0.0;
@@ -510,21 +516,25 @@ impl Node {
         self.local_angle += delta;
     }
 
+    #[must_use]
     pub fn get_local_x(&self, stickfigure: &Stickfigure) -> f32 {
         self.get_local_position(stickfigure).x
     }
 
+    #[must_use]
     pub fn get_local_y(&self, stickfigure: &Stickfigure) -> f32 {
         self.get_local_position(stickfigure).y
     }
 
+    #[must_use]
     pub fn get_local_position(&self, stickfigure: &Stickfigure) -> Vec2 {
         if self.node_type == NodeType::RootNode {
             return Vec2 { x: 0.0, y: 0.0 };
-        };
+        }
         self.length_angle_to_xy(stickfigure)
     }
 
+    #[must_use]
     pub fn get_global_start(&self, stickfigure: &Stickfigure) -> Vec2 {
         let ancestors = stickfigure.get_parents_recursive(self.get_draw_order_index());
         let mut global_position = Vec2 { x: 0.0, y: 0.0 };
@@ -543,6 +553,7 @@ impl Node {
         global_position
     }
 
+    #[must_use]
     pub fn get_global_end(&self, stickfigure: &Stickfigure) -> Vec2 {
         let mut scale_factor = 1.0;
         if self.use_segment_scale {
@@ -565,14 +576,16 @@ impl Node {
         self.length = local_end.length();
     }
 
+    #[must_use]
     pub fn get_display_color(&self, stickfigure: &Stickfigure) -> Color {
-        if !self.use_segment_color {
-            return stickfigure.color;
+        if self.use_segment_color {
+            self.color
         } else {
-            return self.color;
+            stickfigure.color
         }
     }
 
+    #[must_use]
     pub fn get_thickness(&self) -> i32 {
         let mut scale_factor = 1.0;
 
@@ -587,6 +600,7 @@ impl Node {
         self.thickness = thickness;
     }
 
+    #[must_use]
     pub fn get_trapezoid_thickness_start(&self, stickfigure: &Stickfigure) -> f32 {
         if stickfigure.version < 403 || stickfigure.build < 36 {
             return self.thickness as f32;
@@ -597,6 +611,7 @@ impl Node {
         self.trapezoid_thickness_start
     }
 
+    #[must_use]
     pub fn get_trapezoid_thickness_end(&self, stickfigure: &Stickfigure) -> f32 {
         if stickfigure.version < 403 || stickfigure.build < 36 {
             return (self.thickness as f32) * self.trapezoid_top_thickness_ratio;
@@ -620,7 +635,7 @@ impl Node {
 #[repr(i8)]
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub enum NodeType {
-    /// Should only be one RootNode per `Stickfigure`, and it should be the first node.
+    /// Should only be one `RootNode` per `Stickfigure`, and it should be the first node.
     RootNode = -1,
     #[default]
     RoundedSegment = 0,
@@ -634,6 +649,7 @@ pub enum NodeType {
 }
 
 impl NodeType {
+    #[must_use]
     pub fn from_integer(int: i8) -> Option<Self> {
         match int {
             -1 => Some(NodeType::RootNode),
@@ -648,6 +664,7 @@ impl NodeType {
             _ => None,
         }
     }
+    #[must_use]
     pub fn to_integer(&self) -> i8 {
         self.clone() as i8
     }
@@ -662,6 +679,7 @@ pub enum GradientMode {
 }
 
 impl GradientMode {
+    #[must_use]
     pub fn from_integer(int: i8) -> Option<Self> {
         match int {
             0 => Some(GradientMode::Sideways),
@@ -669,6 +687,7 @@ impl GradientMode {
             _ => None,
         }
     }
+    #[must_use]
     pub fn to_integer(&self) -> i8 {
         self.clone() as i8
     }
@@ -684,6 +703,7 @@ pub enum AngleLockMode {
 }
 
 impl AngleLockMode {
+    #[must_use]
     pub fn from_integer(int: i8) -> Option<Self> {
         match int {
             0 => Some(AngleLockMode::None),
@@ -692,6 +712,7 @@ impl AngleLockMode {
             _ => None,
         }
     }
+    #[must_use]
     pub fn to_integer(&self) -> i8 {
         self.clone() as i8
     }
@@ -706,6 +727,7 @@ pub enum TriangleType {
 }
 
 impl TriangleType {
+    #[must_use]
     pub fn from_integer(int: i8) -> Option<Self> {
         match int {
             0 => Some(TriangleType::Isosceles),
@@ -713,6 +735,7 @@ impl TriangleType {
             _ => None,
         }
     }
+    #[must_use]
     pub fn to_integer(&self) -> i8 {
         self.clone() as i8
     }

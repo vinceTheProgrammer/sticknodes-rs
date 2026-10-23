@@ -54,17 +54,17 @@ impl Polyfill {
         let mut indices_to_check = options.attached_node_draw_indices.clone();
         indices_to_check.insert(0, options.anchor_node_draw_index);
         let missing_indices = stickfigure.missing_draw_indices(&indices_to_check);
-        if missing_indices.iter().count() > 0 {
+        if !missing_indices.is_empty() {
             return Err(StickfigureError::InvalidDrawIndices(
-                format!("{:?}", missing_indices),
-                format!("Cannot create polyfill from invalid draw order indices."),
+                format!("{missing_indices:?}"),
+                "Cannot create polyfill from invalid draw order indices.".to_string(),
             ));
         }
 
         if stickfigure.draw_index_is_polyfill_anchor(options.anchor_node_draw_index) {
             return Err(StickfigureError::NodeIsAlreadyAnchor(
                 options.anchor_node_draw_index.0,
-                format!("Cannot create polyfill with anchor that is already occupied."),
+                "Cannot create polyfill with anchor that is already occupied.".to_string(),
             ));
         }
 
@@ -74,9 +74,10 @@ impl Polyfill {
         polyfill.use_polyfill_color = options.use_polyfill_color;
         polyfill.attached_node_draw_indices = options.attached_node_draw_indices;
 
-        return Ok(polyfill);
+        Ok(polyfill)
     }
 
+    #[must_use]
     pub fn to_options(&self) -> PolyfillOptions {
         PolyfillOptions {
             anchor_node_draw_index: self.anchor_node_draw_index,
@@ -92,10 +93,10 @@ impl Polyfill {
         stickfigure: Stickfigure,
     ) -> Result<(), StickfigureError> {
         let missing_indices = stickfigure.missing_draw_indices(&draw_indices);
-        if missing_indices.iter().count() > 0 {
+        if !missing_indices.is_empty() {
             return Err(StickfigureError::InvalidDrawIndices(
-                format!("{:?}", missing_indices),
-                format!("Cannot set attached node draw indices to invalid draw order indices."),
+                format!("{missing_indices:?}"),
+                "Cannot set attached node draw indices to invalid draw order indices.".to_string(),
             ));
         }
 
@@ -118,18 +119,19 @@ impl Polyfill {
         if !stickfigure.draw_index_exists(draw_index) {
             return Err(StickfigureError::InvalidDrawIndex(
                 draw_index.0,
-                format!("Cannot set anchor node draw index to invalid draw order index."),
+                "Cannot set anchor node draw index to invalid draw order index.".to_string(),
             ));
         }
 
         if stickfigure.draw_index_is_polyfill_anchor(draw_index) {
             return Err(StickfigureError::NodeIsAlreadyAnchor(
                 draw_index.0,
-                format!("Cannot create polyfill with anchor that is already occupied."),
+                "Cannot create polyfill with anchor that is already occupied.".to_string(),
             ));
         }
 
-        Ok(self.anchor_node_draw_index = draw_index)
+        let _: () = self.anchor_node_draw_index = draw_index;
+        Ok(())
     }
 
     pub fn insert_attached_node_draw_indices_after(
@@ -139,10 +141,10 @@ impl Polyfill {
         stickfigure: Stickfigure,
     ) -> Result<(), StickfigureError> {
         let missing_indices = stickfigure.missing_draw_indices(&draw_indices);
-        if missing_indices.iter().count() > 0 {
+        if !missing_indices.is_empty() {
             return Err(StickfigureError::InvalidDrawIndices(
-                format!("{:?}", missing_indices),
-                format!("Cannot insert attached node draw indices that include invalid draw order indices."),
+                format!("{missing_indices:?}"),
+                "Cannot insert attached node draw indices that include invalid draw order indices.".to_string(),
             ));
         }
 
@@ -152,13 +154,13 @@ impl Polyfill {
             .position(|index| *index == insert_after_draw_index)
         {
             self.attached_node_draw_indices
-                .splice(vec_index + 1..vec_index + 1, draw_indices);
+                .splice((vec_index + 1)..=vec_index, draw_indices);
         } else {
             return Err(StickfigureError::InvalidDrawIndex(
                 insert_after_draw_index.0,
-                format!("Cannot insert attached node draw indices after a node draw index that is not an attached node draw index of this polyfill."),
+                "Cannot insert attached node draw indices after a node draw index that is not an attached node draw index of this polyfill.".to_string(),
             ));
-        };
+        }
 
         Ok(())
     }
@@ -170,10 +172,10 @@ impl Polyfill {
         stickfigure: Stickfigure,
     ) -> Result<(), StickfigureError> {
         let missing_indices = stickfigure.missing_draw_indices(&draw_indices);
-        if missing_indices.iter().count() > 0 {
+        if !missing_indices.is_empty() {
             return Err(StickfigureError::InvalidDrawIndices(
-                format!("{:?}", missing_indices),
-                format!("Cannot insert attached node draw indices that include invalid draw order indices."),
+                format!("{missing_indices:?}"),
+                "Cannot insert attached node draw indices that include invalid draw order indices.".to_string(),
             ));
         }
 
@@ -187,9 +189,9 @@ impl Polyfill {
         } else {
             return Err(StickfigureError::InvalidDrawIndex(
                 insert_before_draw_index.0,
-                format!("Cannot insert attached node draw indices after a node draw index that is not an attached node draw index of this polyfill."),
+                "Cannot insert attached node draw indices after a node draw index that is not an attached node draw index of this polyfill.".to_string(),
             ));
-        };
+        }
 
         Ok(())
     }
@@ -200,17 +202,16 @@ impl Polyfill {
         stickfigure: Stickfigure,
     ) -> Result<(), StickfigureError> {
         let missing_indices = stickfigure.missing_draw_indices(&draw_indices);
-        if missing_indices.iter().count() > 0 {
+        if !missing_indices.is_empty() {
             return Err(StickfigureError::InvalidDrawIndices(
-                format!("{:?}", missing_indices),
-                format!("Cannot remove attached node draw indices that include invalid draw order indices."),
+                format!("{missing_indices:?}"),
+                "Cannot remove attached node draw indices that include invalid draw order indices.".to_string(),
             ));
         }
 
         let indices: Vec<DrawOrderIndex> = self
             .attached_node_draw_indices
-            .iter()
-            .map(|i| *i)
+            .iter().copied()
             .filter(|draw_index| !draw_indices.contains(draw_index))
             .collect();
 
@@ -227,8 +228,7 @@ impl Polyfill {
         let missing_indices = stickfigure.missing_draw_indices(&draw_indices);
 
         let valid_indices = draw_indices
-            .iter()
-            .map(|i| *i)
+            .iter().copied()
             .filter(|index| !missing_indices.contains(index))
             .collect();
 
@@ -237,6 +237,7 @@ impl Polyfill {
         missing_indices
     }
 
+    #[must_use]
     pub fn get_global_vertices(&self, stickfigure: &Stickfigure) -> Vec<Vec2> {
         let anchor_node = stickfigure.get_node(self.anchor_node_draw_index).expect("this is an internal library error because the anchor node draw index should always be valid");
 
@@ -282,15 +283,13 @@ impl Polyfill {
         let missing_indices = stickfigure.missing_draw_indices(&draw_indices);
 
         let valid_indices: Vec<DrawOrderIndex> = draw_indices
-            .iter()
-            .map(|i| *i)
+            .iter().copied()
             .filter(|index| !missing_indices.contains(index))
             .collect();
 
         let indices: Vec<DrawOrderIndex> = self
             .attached_node_draw_indices
-            .iter()
-            .map(|i| *i)
+            .iter().copied()
             .filter(|draw_index| !valid_indices.contains(draw_index))
             .collect();
 

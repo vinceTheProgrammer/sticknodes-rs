@@ -24,6 +24,7 @@ pub enum ConnectorMethod {
 }
 
 impl ConnectorMethod {
+    #[must_use]
     pub fn from_integer(int: i8) -> Option<Self> {
         match int {
             0 => Some(ConnectorMethod::ByPercent),
@@ -31,6 +32,7 @@ impl ConnectorMethod {
             _ => None,
         }
     }
+    #[must_use]
     pub fn to_integer(&self) -> i8 {
         self.clone() as i8
     }
