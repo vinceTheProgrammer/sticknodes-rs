@@ -1,9 +1,5 @@
 use core::cell::RefCell;
 
-use std::io::Cursor;
-use std::io::Read;
-use std::io::Seek;
-use std::collections::HashMap;
 use petgraph::graph::NodeIndex;
 use petgraph::visit::Dfs;
 use petgraph::visit::EdgeRef;
@@ -11,9 +7,13 @@ use petgraph::visit::VisitMap;
 use petgraph::visit::Visitable;
 use petgraph::Direction;
 use petgraph::Graph;
-use std::{format, rc::Rc, vec, vec::Vec};
 use serde::Deserialize;
 use serde::Serialize;
+use std::collections::HashMap;
+use std::io::Cursor;
+use std::io::Read;
+use std::io::Seek;
+use std::{format, rc::Rc, vec, vec::Vec};
 
 use crate::serialization::read::read_stickfigure;
 use crate::serialization::write::write_stickfigure;
@@ -37,7 +37,9 @@ pub const SUPPORTED_APP_VERSION: i32 = 423;
 #[cfg(not(feature = "tryreadanyway"))]
 pub const SUPPORTED_APP_BUILD: i32 = 72;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord, Default)]
+#[derive(
+    Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord, Default,
+)]
 #[serde(transparent)]
 pub struct DrawOrderIndex(pub i32);
 

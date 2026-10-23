@@ -13,15 +13,15 @@ pub struct ConnectorData {
     pub reversed: bool,
     pub smart_stretch_ancestral_value: f32,
 
-    pub end_node_draw_index: DrawOrderIndex
+    pub end_node_draw_index: DrawOrderIndex,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub enum ConnectorMethod {
     #[default]
     ByPercent = 0,
-    ByValue = 1
-} 
+    ByValue = 1,
+}
 
 impl ConnectorMethod {
     pub fn from_integer(int: i8) -> Option<Self> {

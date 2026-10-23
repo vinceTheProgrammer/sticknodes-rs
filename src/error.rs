@@ -1,6 +1,6 @@
 use std::io;
-use thiserror::Error;
 use std::string::String;
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum LibraryError {
@@ -32,7 +32,6 @@ pub enum StickfigureError {
     // TODO, add later. Will be a breaking change.
     // #[error("Error when decompressing zlib data")]
     // Decompression(),
-
     #[error("Invalid stickfigure header: {0}")]
     InvalidHeader(String),
 

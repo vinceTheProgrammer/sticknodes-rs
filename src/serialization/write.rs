@@ -6,7 +6,8 @@ use std::{format, rc::Rc, vec, vec::Vec};
 
 use crate::{
     error::*,
-    structs::{node::*, polyfill::*, stickfigure::*}, ConnectorMethod,
+    structs::{node::*, polyfill::*, stickfigure::*},
+    ConnectorMethod,
 };
 
 fn write_stickfigure_header(stickfigure: &Stickfigure) -> Result<Vec<u8>, StickfigureError> {
@@ -72,7 +73,8 @@ pub fn write_stickfigure(stickfigure: &Stickfigure) -> Result<Vec<u8>, LibraryEr
 fn write_connector_data(stickfigure: &Stickfigure) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
 
-    let connector_nodes = stickfigure.get_nodes_with_property(|node| node.borrow().connector_data.is_some());
+    let connector_nodes =
+        stickfigure.get_nodes_with_property(|node| node.borrow().connector_data.is_some());
 
     let mut buffer = [0u8; 4]; // fixed-size buffer. should be set to max size of bytes written in this section.
     let mut cursor = Cursor::new(&mut buffer[..]);
@@ -89,7 +91,7 @@ fn write_connector_data(stickfigure: &Stickfigure) -> Result<Vec<u8>, Stickfigur
             .write_i32::<BigEndian>(connector_node.borrow().get_draw_order_index().0)
             .or_else(|err| return Err(StickfigureError::Io(err)))?;
 
-        let connector_data= &mut connector_node.borrow_mut().connector_data;
+        let connector_data = &mut connector_node.borrow_mut().connector_data;
 
         match connector_data {
             Some(data) => {
@@ -147,7 +149,9 @@ fn write_child_nodes(
                         .or_else(|err| return Err(StickfigureError::Io(err)))?;
                     byte_vec.append(&mut Vec::from(buffer));
                 } else {
-                    return Err(StickfigureError::GenericError(format!("Failed to get child node from index (while writing .nodes).")));
+                    return Err(StickfigureError::GenericError(format!(
+                        "Failed to get child node from index (while writing .nodes)."
+                    )));
                 }
             }
         }
@@ -169,7 +173,7 @@ fn write_node(
     version: i32,
     build: i32,
     rc_node: &Rc<RefCell<Node>>,
-    stickfigure: &Stickfigure
+    stickfigure: &Stickfigure,
 ) -> Result<Vec<u8>, StickfigureError> {
     {
         let mut node = rc_node.borrow_mut();
@@ -180,14 +184,14 @@ fn write_node(
         match node.triangle_type {
             TriangleType::Isosceles => {
                 node.right_triangle_direction = 0;
-            },
+            }
             TriangleType::RightTriangle => {
                 if node.triangle_flipped {
                     node.right_triangle_direction = -1;
                 } else {
                     node.right_triangle_direction = 1;
                 }
-            },
+            }
         }
 
         if node.node_type.to_integer() == NodeType::RootNode.to_integer() {
@@ -198,9 +202,10 @@ fn write_node(
             node.angle_lock_offset_minuend = 0.0;
             node.angle_lock_offset_subtrahend = 0.0;
             node.angle_lock_offset = 0.0;
-            
         } else {
-            if let Some(parent_node_draw_index) = stickfigure.get_parent(node.get_draw_order_index()) {
+            if let Some(parent_node_draw_index) =
+                stickfigure.get_parent(node.get_draw_order_index())
+            {
                 if let Some(parent_node) = stickfigure.get_node(parent_node_draw_index) {
                     if let Some(root_node) = stickfigure.get_node(DrawOrderIndex(0)) {
                         match node.angle_lock_mode {
@@ -209,25 +214,27 @@ fn write_node(
                                 node.angle_lock_is_main_node = false;
                                 node.angle_lock_relative_start = 0.0;
                                 node.angle_lock_stickfigure_start = 0.0;
-                            },
+                            }
                             AngleLockMode::Absolute => {
                                 node.is_angle_locked = true;
                                 node.angle_lock_is_main_node = true;
                                 node.angle_lock_relative_start = 0.0;
                                 node.angle_lock_stickfigure_start = 0.0;
-                            },
+                            }
                             AngleLockMode::Relative => {
                                 node.is_angle_locked = true;
                                 node.angle_lock_is_main_node = false;
-                                node.angle_lock_relative_start = parent_node.borrow().get_global_angle(stickfigure);
+                                node.angle_lock_relative_start =
+                                    parent_node.borrow().get_global_angle(stickfigure);
                                 node.angle_lock_stickfigure_start = root_node.borrow().local_angle;
-                            },
+                            }
                         }
-    
+
                         node.angle_lock_offset_minuend = node.get_global_angle(stickfigure);
-                        node.angle_lock_offset_subtrahend = parent_node.borrow().get_global_angle(stickfigure);
-                        node.angle_lock_offset = node.angle_lock_offset_minuend - node.angle_lock_offset_subtrahend;
-                        
+                        node.angle_lock_offset_subtrahend =
+                            parent_node.borrow().get_global_angle(stickfigure);
+                        node.angle_lock_offset =
+                            node.angle_lock_offset_minuend - node.angle_lock_offset_subtrahend;
                     } else {
                         return Err(StickfigureError::GenericError(format!("Failed to get parent node draw index when setting private properties (while writing .nodes).")));
                     }
@@ -236,7 +243,6 @@ fn write_node(
                 }
             } else {
                 return Err(StickfigureError::GenericError(format!("Failed to get root node when setting private properties (while writing .nodes).")));
-    
             }
         }
     }
@@ -488,7 +494,6 @@ fn write_node(
             .write_f32::<BigEndian>(node.trapezoid_top_thickness_ratio)
             .or_else(|err| return Err(StickfigureError::Io(err)))?;
         byte_vec.append(&mut Vec::from(buffer_));
-
     }
     if version >= 403 && build >= 36 {
         let mut buffer_ = [0u8; 2]; // fixed-size buffer. should be set to max size of bytes written in this section.
@@ -655,7 +660,6 @@ fn write_node(
                 .or_else(|err| return Err(StickfigureError::Io(err)))?;
             byte_vec.append(&mut Vec::from(buffer_));
         }
-        
     }
     if version >= 403 && (build >= 41 && build <= 45) {
         let buffer_ = [0u8; 2]; // fixed-size buffer. should be set to max size of bytes written in this section.

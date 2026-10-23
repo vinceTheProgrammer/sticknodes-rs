@@ -58,7 +58,7 @@ pub struct Node {
     pub(crate) use_trapezoid_thickness_end: bool, // use_trapezoid_thickness_2
     pub(crate) trapezoid_top_thickness_ratio: f32,
     pub trapezoid_is_rounded_start: bool, // trapezoid_is_rounded_1
-    pub trapezoid_is_rounded_end: bool, // trapezoid_is_rounded_2
+    pub trapezoid_is_rounded_end: bool,   // trapezoid_is_rounded_2
     pub num_polygon_vertices: i16,
     pub default_local_angle: f32,
     pub local_angle: f32,
@@ -67,18 +67,18 @@ pub struct Node {
     pub gradient_color: Color,
     pub circle_outline_color: Color,
     pub angle_lock_mode: AngleLockMode, // None -> angle locked = false; Absolute -> angle locked = true, is main node = true; Relative -> angle locked = true, is main node = false
-    pub(crate) is_angle_locked: bool, //
+    pub(crate) is_angle_locked: bool,   //
     pub(crate) angle_lock_is_main_node: bool, //
     pub(crate) angle_lock_offset_minuend: f32, // my angle
     pub(crate) angle_lock_offset_subtrahend: f32, // parent angle
-    pub(crate) angle_lock_offset: f32, // should be my angle minus my parent's angle
+    pub(crate) angle_lock_offset: f32,  // should be my angle minus my parent's angle
     pub(crate) angle_lock_relative_start: f32, // if absolute: 0; if relative: parent angle
     pub(crate) angle_lock_stickfigure_start: f32, // if absolute: 0; if relative: main node angle
     pub angle_lock_relative_multiplier: i8, //
-    pub is_drag_locked: bool, //
-    pub drag_lock_angle: f32, //
-    pub smart_stretch_multiplier: f32, //
-    pub connector_data: Option<ConnectorData> //
+    pub is_drag_locked: bool,           //
+    pub drag_lock_angle: f32,           //
+    pub smart_stretch_multiplier: f32,  //
+    pub connector_data: Option<ConnectorData>, //
 }
 
 impl Default for Node {
@@ -326,7 +326,8 @@ impl Node {
             length: options.length,
             default_thickness: options.default_thickness,
             thickness: options.thickness,
-            segment_curve_radius_and_default_curve_radius: options.segment_curve_radius_and_default_curve_radius,
+            segment_curve_radius_and_default_curve_radius: options
+                .segment_curve_radius_and_default_curve_radius,
             curve_circulization: options.curve_circulization,
             segment_curve_polyfill_precision: options.segment_curve_polyfill_precision,
             half_arc: options.half_arc,
@@ -404,7 +405,7 @@ impl Node {
             is_drag_locked: self.is_drag_locked,
             drag_lock_angle: self.drag_lock_angle,
             smart_stretch_multiplier: self.smart_stretch_multiplier,
-            connector_data: self.connector_data.clone()
+            connector_data: self.connector_data.clone(),
         }
     }
 
@@ -440,7 +441,8 @@ impl Node {
             length: node.length,
             default_thickness: node.default_thickness,
             thickness: node.thickness,
-            segment_curve_radius_and_default_curve_radius: node.segment_curve_radius_and_default_curve_radius,
+            segment_curve_radius_and_default_curve_radius: node
+                .segment_curve_radius_and_default_curve_radius,
             curve_circulization: node.curve_circulization,
             segment_curve_polyfill_precision: node.segment_curve_polyfill_precision,
             half_arc: node.half_arc,
@@ -493,7 +495,6 @@ impl Node {
 
                 global_angle += angle;
             }
-            
         });
 
         let angle = self.local_angle;
@@ -518,14 +519,15 @@ impl Node {
     }
 
     pub fn get_local_position(&self, stickfigure: &Stickfigure) -> Vec2 {
-        if self.node_type == NodeType::RootNode { return Vec2 { x: 0.0, y: 0.0 } };
+        if self.node_type == NodeType::RootNode {
+            return Vec2 { x: 0.0, y: 0.0 };
+        };
         self.length_angle_to_xy(stickfigure)
     }
 
     pub fn get_global_start(&self, stickfigure: &Stickfigure) -> Vec2 {
         let ancestors = stickfigure.get_parents_recursive(self.get_draw_order_index());
-        let mut global_position = Vec2 {x: 0.0, y: 0.0 };
-        
+        let mut global_position = Vec2 { x: 0.0, y: 0.0 };
 
         ancestors.iter().for_each(|ancestor| {
             if let Some(node) = stickfigure.get_node(*ancestor) {
@@ -553,9 +555,8 @@ impl Node {
     }
 
     pub fn set_global_end(&mut self, stickfigure: &Stickfigure, target_global_end: Vec2) {
-
         let parent_global_start = self.get_global_start(stickfigure);
-    
+
         let local_end = target_global_end - parent_global_start;
 
         let angle = local_end.y.atan2(local_end.x).to_degrees();
@@ -565,8 +566,11 @@ impl Node {
     }
 
     pub fn get_display_color(&self, stickfigure: &Stickfigure) -> Color {
-        if !self.use_segment_color { return stickfigure.color }
-        else { return self.color }
+        if !self.use_segment_color {
+            return stickfigure.color;
+        } else {
+            return self.color;
+        }
     }
 
     pub fn get_thickness(&self) -> i32 {
@@ -584,14 +588,22 @@ impl Node {
     }
 
     pub fn get_trapezoid_thickness_start(&self, stickfigure: &Stickfigure) -> f32 {
-        if stickfigure.version < 403 || stickfigure.build < 36 { return self.thickness as f32 }
-        if !self.use_trapezoid_thickness_start { return self.thickness as f32 }
+        if stickfigure.version < 403 || stickfigure.build < 36 {
+            return self.thickness as f32;
+        }
+        if !self.use_trapezoid_thickness_start {
+            return self.thickness as f32;
+        }
         self.trapezoid_thickness_start
     }
 
     pub fn get_trapezoid_thickness_end(&self, stickfigure: &Stickfigure) -> f32 {
-        if stickfigure.version < 403 || stickfigure.build < 36 { return (self.thickness as f32) * self.trapezoid_top_thickness_ratio }
-        if !self.use_trapezoid_thickness_end { return self.thickness as f32 }
+        if stickfigure.version < 403 || stickfigure.build < 36 {
+            return (self.thickness as f32) * self.trapezoid_top_thickness_ratio;
+        }
+        if !self.use_trapezoid_thickness_end {
+            return self.thickness as f32;
+        }
         self.trapezoid_thickness_end
     }
 
@@ -601,7 +613,7 @@ impl Node {
         let angle_radians = angle_degrees.to_radians();
         let x = length * angle_radians.cos();
         let y = length * angle_radians.sin();
-        Vec2 {x, y}
+        Vec2 { x, y }
     }
 }
 
@@ -646,7 +658,7 @@ impl NodeType {
 pub enum GradientMode {
     Sideways = 0,
     #[default]
-    Normal = 1
+    Normal = 1,
 }
 
 impl GradientMode {
@@ -668,7 +680,7 @@ pub enum AngleLockMode {
     #[default]
     None = 0,
     Absolute = 1,
-    Relative = 2
+    Relative = 2,
 }
 
 impl AngleLockMode {
@@ -690,7 +702,7 @@ impl AngleLockMode {
 pub enum TriangleType {
     #[default]
     Isosceles = 0,
-    RightTriangle = 1
+    RightTriangle = 1,
 }
 
 impl TriangleType {

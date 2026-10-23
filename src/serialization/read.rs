@@ -1,9 +1,9 @@
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
-use std::io::{self, Read, Seek, SeekFrom};
-use std::{rc::Rc, vec::Vec, vec, format};
 use miniz_oxide::inflate::decompress_to_vec_zlib;
+use std::io::{self, Read, Seek, SeekFrom};
+use std::{format, rc::Rc, vec, vec::Vec};
 
-use core::{cell::RefCell};
+use core::cell::RefCell;
 
 use crate::{
     error::*,
@@ -53,12 +53,16 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
     let mut build = stickfigure.build;
 
     if version < 160 {
-        reader.seek(SeekFrom::Start(0)).or_else(|err| return Err(StickfigureError::Io(err)))?;
+        reader
+            .seek(SeekFrom::Start(0))
+            .or_else(|err| return Err(StickfigureError::Io(err)))?;
         let mut compressed = Vec::new();
-        reader.read_to_end(&mut compressed).map_err(StickfigureError::Io)?;
+        reader
+            .read_to_end(&mut compressed)
+            .map_err(StickfigureError::Io)?;
 
         let decompressed = decompress_to_vec_zlib(&compressed)
-        .map_err(|err| StickfigureError::DecompressError(format!("{}", err)))?;
+            .map_err(|err| StickfigureError::DecompressError(format!("{}", err)))?;
 
         let mut decompressed_str = decompressed.as_slice();
 
@@ -69,7 +73,8 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
 
         if version > Stickfigure::default().version {
             return Err(LibraryError::UnsupportedVersion(version));
-        } else if version == Stickfigure::default().version && build > Stickfigure::default().build {
+        } else if version == Stickfigure::default().version && build > Stickfigure::default().build
+        {
             return Err(LibraryError::UnsupportedBuild(version, build));
         }
 
@@ -80,15 +85,16 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
             DrawOrderIndex(-1),
             1,
             &mut stickfigure,
-            Vec::from(vec![false])
+            Vec::from(vec![false]),
         )?;
     } else {
         if version > Stickfigure::default().version {
             return Err(LibraryError::UnsupportedVersion(version));
-        } else if version == Stickfigure::default().version && build > Stickfigure::default().build {
+        } else if version == Stickfigure::default().version && build > Stickfigure::default().build
+        {
             return Err(LibraryError::UnsupportedBuild(version, build));
         }
-    
+
         read_child_nodes::<BigEndian>(
             reader,
             stickfigure.version,
@@ -96,9 +102,9 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
             DrawOrderIndex(-1),
             1,
             &mut stickfigure,
-            Vec::from(vec![false])
+            Vec::from(vec![false]),
         )?;
-    
+
         if stickfigure.version >= 230 {
             stickfigure.polyfills = read_polyfill_header::<BigEndian>(reader)?;
         }
@@ -115,13 +121,13 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
                 let end_draw_index = reader
                     .read_i32::<BigEndian>()
                     .or_else(|err| return Err(StickfigureError::Io(err)))?;
-                
+
                 let connector_node = stickfigure.get_node(DrawOrderIndex(my_draw_index)).ok_or_else(|| StickfigureError::InvalidDrawIndex(my_draw_index, format!("Attempted to get connector node defined in .nodes file that does not exist(?)")))?;
                 if !stickfigure.draw_index_exists(DrawOrderIndex(end_draw_index)) {
                     return Err(StickfigureError::InvalidDrawIndex(end_draw_index, format!("Attempted to get end connector node defined in .nodes file that does not exist(?)")))?;
                 }
 
-                let connector_data= &mut connector_node.borrow_mut().connector_data;
+                let connector_data = &mut connector_node.borrow_mut().connector_data;
 
                 match connector_data {
                     Some(data) => {
@@ -143,13 +149,13 @@ fn read_child_nodes<E: ByteOrder>(
     parent_draw_index: DrawOrderIndex,
     number_of_child_nodes_to_read: i32,
     stickfigure: &mut Stickfigure,
-    connector_booleans_to_use: Vec<bool>
+    connector_booleans_to_use: Vec<bool>,
 ) -> Result<(), StickfigureError> {
     for i in 0..number_of_child_nodes_to_read {
-
         let is_connector = connector_booleans_to_use.get(i as usize).unwrap_or(&false);
 
-        let (node, number_of_child_nodes, connector_booleans) = read_node::<E>(reader, version, build, *is_connector)?;
+        let (node, number_of_child_nodes, connector_booleans) =
+            read_node::<E>(reader, version, build, *is_connector)?;
 
         let number_of_child_nodes = number_of_child_nodes;
         let draw_index = node.draw_order_index;
@@ -167,7 +173,7 @@ fn read_child_nodes<E: ByteOrder>(
             draw_index,
             number_of_child_nodes,
             stickfigure,
-            connector_booleans
+            connector_booleans,
         )?;
     }
 
@@ -177,7 +183,8 @@ fn read_child_nodes<E: ByteOrder>(
 fn read_node<E: ByteOrder>(
     reader: &mut impl Read,
     version: i32,
-    build: i32, is_connector: bool
+    build: i32,
+    is_connector: bool,
 ) -> Result<(Node, i32, Vec<bool>), StickfigureError> {
     let mut node = Node::new();
 
@@ -206,7 +213,8 @@ fn read_node<E: ByteOrder>(
         let method = reader
             .read_i32::<E>()
             .or_else(|err| return Err(StickfigureError::Io(err)))?;
-        connector_data.method = ConnectorMethod::from_integer(method as i8).unwrap_or(ConnectorMethod::default());
+        connector_data.method =
+            ConnectorMethod::from_integer(method as i8).unwrap_or(ConnectorMethod::default());
         connector_data.reversed = reader
             .read_u8()
             .or_else(|err| return Err(StickfigureError::Io(err)))?
@@ -291,10 +299,11 @@ fn read_node<E: ByteOrder>(
     }
     if version >= 403 && build >= 20 {
         let gradient_mode_short = reader
-        .read_i16::<E>()
-        .or_else(|err| return Err(StickfigureError::Io(err)))?;
+            .read_i16::<E>()
+            .or_else(|err| return Err(StickfigureError::Io(err)))?;
 
-        node.gradient_mode = GradientMode::from_integer(gradient_mode_short as i8).unwrap_or(GradientMode::default());
+        node.gradient_mode = GradientMode::from_integer(gradient_mode_short as i8)
+            .unwrap_or(GradientMode::default());
     }
     node.use_segment_scale = reader
         .read_u8()
@@ -357,10 +366,12 @@ fn read_node<E: ByteOrder>(
         if build < 64 {
             node.trapezoid_thickness_start = reader
                 .read_i32::<E>()
-                .or_else(|err| return Err(StickfigureError::Io(err)))? as f32;
+                .or_else(|err| return Err(StickfigureError::Io(err)))?
+                as f32;
             node.trapezoid_thickness_end = reader
                 .read_i32::<E>()
-                .or_else(|err| return Err(StickfigureError::Io(err)))? as f32;
+                .or_else(|err| return Err(StickfigureError::Io(err)))?
+                as f32;
         } else {
             node.trapezoid_thickness_start = reader
                 .read_f32::<E>()
@@ -371,8 +382,12 @@ fn read_node<E: ByteOrder>(
         }
     }
     if version >= 403 && build == 36 {
-        reader.read_i32::<E>().or_else(|err| return Err(StickfigureError::Io(err)))?;
-        reader.read_i32::<E>().or_else(|err| return Err(StickfigureError::Io(err)))?;
+        reader
+            .read_i32::<E>()
+            .or_else(|err| return Err(StickfigureError::Io(err)))?;
+        reader
+            .read_i32::<E>()
+            .or_else(|err| return Err(StickfigureError::Io(err)))?;
         node.use_trapezoid_thickness_start = reader
             .read_u8()
             .or_else(|err| return Err(StickfigureError::Io(err)))?
@@ -382,7 +397,7 @@ fn read_node<E: ByteOrder>(
             .or_else(|err| return Err(StickfigureError::Io(err)))?
             != 0;
     }
-    if version >= 256 && build != 36{
+    if version >= 256 && build != 36 {
         node.trapezoid_top_thickness_ratio = reader
             .read_f32::<E>()
             .or_else(|err| return Err(StickfigureError::Io(err)))?;
@@ -474,7 +489,9 @@ fn read_node<E: ByteOrder>(
         }
     }
     if version >= 403 && (build >= 39 && build <= 50) {
-        reader.read_f32::<E>().or_else(|err| return Err(StickfigureError::Io(err)))?;
+        reader
+            .read_f32::<E>()
+            .or_else(|err| return Err(StickfigureError::Io(err)))?;
     }
     if version >= 403 && build >= 51 {
         node.angle_lock_is_main_node = reader
@@ -516,18 +533,20 @@ fn read_node<E: ByteOrder>(
     if version >= 403 && build >= 39 {
         if build <= 40 {
             node.is_drag_locked = reader
-            .read_i16::<E>()
-            .or_else(|err| return Err(StickfigureError::Io(err)))?
-            != 0;
+                .read_i16::<E>()
+                .or_else(|err| return Err(StickfigureError::Io(err)))?
+                != 0;
         } else {
             node.is_drag_locked = reader
-            .read_u8()
-            .or_else(|err| return Err(StickfigureError::Io(err)))?
-            != 0;
+                .read_u8()
+                .or_else(|err| return Err(StickfigureError::Io(err)))?
+                != 0;
         }
     }
     if version >= 403 && (build >= 41 && build <= 45) {
-        reader.read_i16::<E>().or_else(|err| return Err(StickfigureError::Io(err)))?;
+        reader
+            .read_i16::<E>()
+            .or_else(|err| return Err(StickfigureError::Io(err)))?;
     }
     if version >= 403 && build >= 46 {
         node.drag_lock_angle = reader
@@ -541,7 +560,9 @@ fn read_node<E: ByteOrder>(
             .or_else(|err| return Err(StickfigureError::Io(err)))?;
     }
     if version >= 403 && (build >= 41 && build <= 45) {
-        reader.read_u8().or_else(|err| return Err(StickfigureError::Io(err)))?;
+        reader
+            .read_u8()
+            .or_else(|err| return Err(StickfigureError::Io(err)))?;
     }
     let number_of_child_nodes = reader
         .read_i32::<E>()
@@ -551,9 +572,9 @@ fn read_node<E: ByteOrder>(
     if version >= 403 && build > 38 {
         for _ in 0..number_of_child_nodes {
             let bool = reader
-            .read_i32::<E>()
-            .or_else(|err| return Err(StickfigureError::Io(err)))?
-            != 0;
+                .read_i32::<E>()
+                .or_else(|err| return Err(StickfigureError::Io(err)))?
+                != 0;
             connector_booleans.push(bool);
         }
     }
@@ -562,15 +583,15 @@ fn read_node<E: ByteOrder>(
         -1 => {
             node.triangle_type = TriangleType::RightTriangle;
             node.triangle_flipped = true;
-        },
+        }
         0 => {
             node.triangle_type = TriangleType::Isosceles;
             node.triangle_flipped = false;
-        },
+        }
         1 => {
             node.triangle_type = TriangleType::RightTriangle;
             node.triangle_flipped = false;
-        },
+        }
         _ => {
             node.triangle_type = TriangleType::RightTriangle;
             if node.right_triangle_direction < 0 {

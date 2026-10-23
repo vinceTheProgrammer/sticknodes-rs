@@ -1,7 +1,7 @@
 use glam::Vec2;
-use std::collections::HashSet;
 use serde::Deserialize;
 use serde::Serialize;
+use std::collections::HashSet;
 use std::{format, vec::Vec};
 
 use crate::{color::Color, Stickfigure, StickfigureError};
@@ -244,7 +244,9 @@ impl Polyfill {
 
         let nodes = self.attached_node_draw_indices.iter().map(|id| stickfigure.get_node(*id).expect("this is an internal library error because all attached node draw indices should always be valid"));
 
-        let mut node_positions = nodes.map(|node| node.borrow().get_global_end(stickfigure)).collect::<Vec<Vec2>>();
+        let mut node_positions = nodes
+            .map(|node| node.borrow().get_global_end(stickfigure))
+            .collect::<Vec<Vec2>>();
 
         node_positions.insert(0, anchor_position);
 
