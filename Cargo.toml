@@ -28,7 +28,7 @@ glam = "0.32.0"
 dead_code = "deny"
 unused_imports = "deny"
 unused_variables = "deny"
-# missing_docs = "warn"
+missing_docs = "warn"
 
 [lints.clippy]
 all = "warn"
