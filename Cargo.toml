@@ -23,3 +23,13 @@ petgraph = { version = "0.8.1", features = ["serde-1"] }
 serde = { version = "1.0.219", features = ["derive"] }
 thiserror = "2.0.12"
 glam = "0.32.0"
+
+[lints.rust]
+dead_code = "deny"
+unused_imports = "deny"
+unused_variables = "deny"
+# missing_docs = "warn"
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"
