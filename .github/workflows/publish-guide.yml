@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - guide/**
 
 jobs:
   build-and-deploy:
@@ -19,7 +21,7 @@ jobs:
           override: true
 
       - name: Install mdbook
-        run: cargo install mdbook --no-default-features --features search --vers "^0.4" --locked
+        run: cargo install mdbook --no-default-features --features search --vers "^0.5.4" --locked
 
       - name: Build book
         working-directory: ./guide
