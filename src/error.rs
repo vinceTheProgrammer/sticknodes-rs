@@ -1,4 +1,4 @@
-use core2::io;
+use no_std_io2::io;
 use thiserror::Error;
 extern crate alloc;
 use alloc::string::String;
@@ -23,6 +23,9 @@ pub enum LibraryError {
 pub enum StickfigureError {
     #[error("I/O error: {0}")]
     Io(io::Error),
+
+    #[error("Decompress error: {0}")]
+    DecompressError(String),
 
     #[error("{0}")]
     GenericError(String),

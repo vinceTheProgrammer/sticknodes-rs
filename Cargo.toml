@@ -17,8 +17,8 @@ std = []
 tryreadanyway = []
 
 [dependencies]
-byteorder-core2 = { version="1.5.0-core2", default-features = false }
-core2 = { version = "0.4.0", default-features = false, features = ["alloc"] }
+byteorder-no_std_io2 = { path = "../byteorder-no_std_io2/", default-features = false }
+no_std_io2 = { version = "0.9.4", default-features = false, features = ["alloc"] }
 hashbrown = { version = "0.15.2", features = ["serde"] }
 libm = "0.2.15"
 miniz_oxide = { version = "0.8.8", default-features = false, features = ["with-alloc"] }

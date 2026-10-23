@@ -33,7 +33,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-sticknodes-rs = "4.0.0-alpha"
+sticknodes-rs = "3.0.0-alpha"
 ```
 
 ## Example Usage

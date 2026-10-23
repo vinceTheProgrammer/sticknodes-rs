@@ -1,8 +1,8 @@
 use core::cell::RefCell;
 
-use core2::io::Cursor;
-use core2::io::Read;
-use core2::io::Seek;
+use no_std_io2::io::Cursor;
+use no_std_io2::io::Read;
+use no_std_io2::io::Seek;
 use hashbrown::HashMap;
 use petgraph::graph::NodeIndex;
 use petgraph::visit::Dfs;

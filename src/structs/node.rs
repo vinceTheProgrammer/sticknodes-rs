@@ -1,4 +1,5 @@
 use glam::Vec2;
+use libm::{self, Libm};
 use petgraph::graph::NodeIndex;
 use petgraph::Graph;
 use serde::Deserialize;
@@ -503,6 +504,12 @@ impl Node {
         global_angle
     }
 
+    pub fn set_global_angle(&mut self, stickfigure: &Stickfigure, target_global: f32) {
+        let current_global = self.get_global_angle(stickfigure);
+        let delta = target_global - current_global;
+        self.local_angle += delta;
+    }
+
     pub fn get_local_x(&self, stickfigure: &Stickfigure) -> f32 {
         self.get_local_position(stickfigure).x
     }
@@ -546,6 +553,18 @@ impl Node {
         global_start + (self.get_local_position(stickfigure) * scale_factor)
     }
 
+    pub fn set_global_end(&mut self, stickfigure: &Stickfigure, target_global_end: Vec2) {
+
+        let parent_global_start = self.get_global_start(stickfigure);
+    
+        let local_end = target_global_end - parent_global_start;
+
+        let angle = Libm::<f32>::atan2(local_end.y, local_end.x).to_degrees();
+
+        self.set_global_angle(stickfigure, angle);
+        self.length = local_end.length();
+    }
+
     pub fn get_display_color(&self, stickfigure: &Stickfigure) -> Color {
         if !self.use_segment_color { return stickfigure.color }
         else { return self.color }
@@ -559,6 +578,10 @@ impl Node {
         }
 
         ((self.thickness as f32) * scale_factor) as i32
+    }
+
+    pub fn set_thickness(&mut self, thickness: i32) {
+        self.thickness = thickness;
     }
 
     pub fn get_trapezoid_thickness_start(&self, stickfigure: &Stickfigure) -> f32 {

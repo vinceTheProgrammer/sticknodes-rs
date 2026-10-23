@@ -1,5 +1,5 @@
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
-use core2::io::{self, Read, Seek, SeekFrom};
+use no_std_io2::io::{self, Read, Seek, SeekFrom};
 extern crate alloc;
 use alloc::{rc::Rc, vec::Vec, vec, format};
 use miniz_oxide::inflate::decompress_to_vec_zlib;
@@ -53,13 +53,13 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
     let mut version = stickfigure.version;
     let mut build = stickfigure.build;
 
-    if version > Stickfigure::default().version || version < 160 {
+    if version < 160 {
         reader.seek(SeekFrom::Start(0)).or_else(|err| return Err(StickfigureError::Io(err)))?;
         let mut compressed = Vec::new();
         reader.read_to_end(&mut compressed).map_err(StickfigureError::Io)?;
 
         let decompressed = decompress_to_vec_zlib(&compressed)
-        .map_err(|_| StickfigureError::Io(io::Error::new(io::ErrorKind::Other, "")))?;
+        .map_err(|err| StickfigureError::DecompressError(format!("{}", err)))?;
 
         let mut decompressed_str = decompressed.as_slice();
 
