@@ -11,8 +11,6 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::io::Cursor;
-use std::io::Read;
-use std::io::Seek;
 use std::{format, rc::Rc, vec, vec::Vec};
 
 use crate::serialization::read::read_stickfigure;
@@ -639,29 +637,6 @@ impl Stickfigure {
             .get(&draw_index)
             .copied()
             .expect("NodeIndex missing DrawOrderIndex — bug in Stickfigure logic")
-    }
-
-    pub(crate) fn node_indices_from_draw_order_indices(
-        &self,
-        draw_indices: &[DrawOrderIndex],
-    ) -> Vec<NodeIndex> {
-        draw_indices
-            .iter()
-            .map(|di| self.node_index_from_draw_order(*di))
-            .collect()
-    }
-
-    fn insert_new_indices(&mut self, node_indices: NodeIndices) {
-        if self.draw_index_map.contains_key(&node_indices.node_index)
-            || self.node_index_map.contains_key(&node_indices.draw_index)
-        {
-            panic!("Library is attempting to insert a new index pair that already exists - this is a bug with the library")
-        }
-
-        self.draw_index_map
-            .insert(node_indices.node_index, node_indices.draw_index);
-        self.node_index_map
-            .insert(node_indices.draw_index, node_indices.node_index);
     }
 
     fn get_next_draw_index(&mut self) -> DrawOrderIndex {

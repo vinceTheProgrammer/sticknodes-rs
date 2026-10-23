@@ -1,6 +1,6 @@
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
 use miniz_oxide::inflate::decompress_to_vec_zlib;
-use std::io::{self, Read, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom};
 use std::{format, rc::Rc, vec, vec::Vec};
 
 use core::cell::RefCell;
