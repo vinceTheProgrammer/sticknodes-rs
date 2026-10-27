@@ -68,6 +68,7 @@ pub struct Node {
     pub circle_outline_color: Color,
     pub angle_lock_mode: AngleLockMode, // None -> angle locked = false; Absolute -> angle locked = true, is main node = true; Relative -> angle locked = true, is main node = false
     pub(crate) is_angle_locked: bool,   //
+    #[allow(clippy::struct_field_names)]
     pub(crate) angle_lock_is_main_node: bool, //
     pub(crate) angle_lock_offset_minuend: f32, // my angle
     pub(crate) angle_lock_offset_subtrahend: f32, // parent angle
@@ -414,7 +415,6 @@ impl Node {
 
     #[must_use]
     pub fn build_serializable_tree(
-        &self,
         graph: &Graph<Rc<RefCell<Node>>, ()>,
         current: NodeIndex,
     ) -> SerializableNode {
@@ -422,7 +422,7 @@ impl Node {
         let mut children = Vec::new();
 
         for neighbor in graph.neighbors_directed(current, petgraph::Direction::Outgoing) {
-            children.push(self.build_serializable_tree(graph, neighbor));
+            children.push(Node::build_serializable_tree(graph, neighbor));
         }
 
         SerializableNode {
@@ -495,13 +495,13 @@ impl Node {
         let ancestors = stickfigure.get_parents_recursive(self.get_draw_order_index());
         let mut global_angle = 0.0;
 
-        ancestors.iter().for_each(|ancestor| {
+        for ancestor in &ancestors {
             if let Some(node) = stickfigure.get_node(*ancestor) {
                 let angle = node.borrow().local_angle;
 
                 global_angle += angle;
             }
-        });
+        }
 
         let angle = self.local_angle;
 
@@ -586,6 +586,7 @@ impl Node {
     }
 
     #[must_use]
+    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)] // allow justified because Stick Nodes likely behaves similarly
     pub fn get_thickness(&self) -> i32 {
         let mut scale_factor = 1.0;
 
@@ -601,6 +602,7 @@ impl Node {
     }
 
     #[must_use]
+    #[allow(clippy::cast_precision_loss)] // allow justified because Stick Nodes likely behaves similarly
     pub fn get_trapezoid_thickness_start(&self, stickfigure: &Stickfigure) -> f32 {
         if stickfigure.version < 403 || stickfigure.build < 36 {
             return self.thickness as f32;
@@ -612,6 +614,7 @@ impl Node {
     }
 
     #[must_use]
+    #[allow(clippy::cast_precision_loss)] // allow justified because Stick Nodes likely behaves similarly
     pub fn get_trapezoid_thickness_end(&self, stickfigure: &Stickfigure) -> f32 {
         if stickfigure.version < 403 || stickfigure.build < 36 {
             return (self.thickness as f32) * self.trapezoid_top_thickness_ratio;

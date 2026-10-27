@@ -82,6 +82,8 @@ fn write_connector_data(stickfigure: &Stickfigure) -> Result<Vec<u8>, Stickfigur
 
     let mut buffer = [0u8; 4]; // fixed-size buffer. should be set to max size of bytes written in this section.
     let mut cursor = Cursor::new(&mut buffer[..]);
+    // Allow justified because wrapping and truncation would only matter at absurdly large node counts
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
     cursor
         .write_i32::<BigEndian>(connector_nodes.len() as i32)
         .map_err(StickfigureError::Io)?;
@@ -132,6 +134,8 @@ fn write_child_nodes(
         byte_vec.append(&mut write_node(version, build, node, stickfigure)?);
 
         let children = stickfigure.get_children(draw_index);
+        // Allow justified because wrapping and truncation would only matter at absurdly large node counts
+        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
         let number_of_child_nodes = children.len() as i32;
 
         let mut buffer = [0u8; 4]; // fixed-size buffer. should be set to max size of bytes written in this section.
@@ -472,6 +476,9 @@ fn write_node(
     if version >= 403 && build >= 36 {
         let mut buffer_ = [0u8; 8]; // fixed-size buffer. should be set to max size of bytes written in this section.
         let mut cursor_ = Cursor::new(&mut buffer_[..]);
+        // Allow justified because we can't avoid truncating without adding redundant i32 trapezoid thickness start/end fields
+        // Only figures from a small range of build versions will be effected
+        #[allow(clippy::cast_possible_truncation)]
         if build < 64 {
             cursor_
                 .write_i32::<BigEndian>(node.trapezoid_thickness_start as i32)
@@ -700,6 +707,8 @@ fn write_polyfill_header(stickfigure: &Stickfigure) -> Result<Vec<u8>, Stickfigu
 
     let mut buffer = [0u8; 4]; // fixed-size buffer. should be set to max size of bytes written in this section.
     let mut cursor = Cursor::new(&mut buffer[..]);
+    // Allow justified because wrapping and truncation would only matter at absurdly large polyfill counts
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
     let number_of_polyfills = stickfigure.polyfills.len() as i32;
     cursor
         .write_i32::<BigEndian>(number_of_polyfills)
@@ -736,6 +745,8 @@ fn write_polyfill(rc_polyfill: &Rc<RefCell<Polyfill>>) -> Result<Vec<u8>, Stickf
         .write_u8(u8::from(polyfill.use_polyfill_color))
         .map_err(StickfigureError::Io)?;
 
+    // Allow justified because wrapping and truncation would only matter at absurdly large node counts
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
     let number_of_attached_nodes = polyfill.attached_node_draw_indices.len() as i32;
     cursor
         .write_i32::<BigEndian>(number_of_attached_nodes)

@@ -49,7 +49,7 @@ impl Default for PolyfillOptions {
 impl Polyfill {
     pub fn from_options(
         options: PolyfillOptions,
-        stickfigure: Stickfigure,
+        stickfigure: &Stickfigure,
     ) -> Result<Self, StickfigureError> {
         let mut indices_to_check = options.attached_node_draw_indices.clone();
         indices_to_check.insert(0, options.anchor_node_draw_index);
@@ -68,11 +68,12 @@ impl Polyfill {
             ));
         }
 
-        let mut polyfill = Polyfill::default();
-        polyfill.anchor_node_draw_index = options.anchor_node_draw_index;
-        polyfill.color = options.color;
-        polyfill.use_polyfill_color = options.use_polyfill_color;
-        polyfill.attached_node_draw_indices = options.attached_node_draw_indices;
+        let polyfill = Polyfill {
+            anchor_node_draw_index: options.anchor_node_draw_index,
+            color: options.color,
+            use_polyfill_color: options.use_polyfill_color,
+            attached_node_draw_indices: options.attached_node_draw_indices,
+        };
 
         Ok(polyfill)
     }
@@ -90,7 +91,7 @@ impl Polyfill {
     pub fn set_attached_node_draw_indices(
         &mut self,
         draw_indices: Vec<DrawOrderIndex>,
-        stickfigure: Stickfigure,
+        stickfigure: &Stickfigure,
     ) -> Result<(), StickfigureError> {
         let missing_indices = stickfigure.missing_draw_indices(&draw_indices);
         if !missing_indices.is_empty() {
@@ -114,7 +115,7 @@ impl Polyfill {
     pub fn set_anchor_node_draw_index(
         &mut self,
         draw_index: DrawOrderIndex,
-        stickfigure: Stickfigure,
+        stickfigure: &Stickfigure,
     ) -> Result<(), StickfigureError> {
         if !stickfigure.draw_index_exists(draw_index) {
             return Err(StickfigureError::InvalidDrawIndex(
@@ -138,7 +139,7 @@ impl Polyfill {
         &mut self,
         draw_indices: Vec<DrawOrderIndex>,
         insert_after_draw_index: DrawOrderIndex,
-        stickfigure: Stickfigure,
+        stickfigure: &Stickfigure,
     ) -> Result<(), StickfigureError> {
         let missing_indices = stickfigure.missing_draw_indices(&draw_indices);
         if !missing_indices.is_empty() {
@@ -170,7 +171,7 @@ impl Polyfill {
         &mut self,
         draw_indices: Vec<DrawOrderIndex>,
         insert_before_draw_index: DrawOrderIndex,
-        stickfigure: Stickfigure,
+        stickfigure: &Stickfigure,
     ) -> Result<(), StickfigureError> {
         let missing_indices = stickfigure.missing_draw_indices(&draw_indices);
         if !missing_indices.is_empty() {
@@ -200,10 +201,10 @@ impl Polyfill {
 
     pub fn remove_attached_node_draw_indices(
         &mut self,
-        draw_indices: Vec<DrawOrderIndex>,
-        stickfigure: Stickfigure,
+        draw_indices: &[DrawOrderIndex],
+        stickfigure: &Stickfigure,
     ) -> Result<(), StickfigureError> {
-        let missing_indices = stickfigure.missing_draw_indices(&draw_indices);
+        let missing_indices = stickfigure.missing_draw_indices(draw_indices);
         if !missing_indices.is_empty() {
             return Err(StickfigureError::InvalidDrawIndices(
                 format!("{missing_indices:?}"),
@@ -226,10 +227,10 @@ impl Polyfill {
 
     pub fn try_set_attached_node_draw_indices(
         &mut self,
-        draw_indices: Vec<DrawOrderIndex>,
-        stickfigure: Stickfigure,
+        draw_indices: &[DrawOrderIndex],
+        stickfigure: &Stickfigure,
     ) -> Vec<DrawOrderIndex> {
-        let missing_indices = stickfigure.missing_draw_indices(&draw_indices);
+        let missing_indices = stickfigure.missing_draw_indices(draw_indices);
 
         let valid_indices = draw_indices
             .iter()
@@ -282,10 +283,10 @@ impl Polyfill {
 
     pub fn try_remove_attached_node_draw_indices(
         &mut self,
-        draw_indices: Vec<DrawOrderIndex>,
-        stickfigure: Stickfigure,
+        draw_indices: &[DrawOrderIndex],
+        stickfigure: &Stickfigure,
     ) -> Vec<DrawOrderIndex> {
-        let missing_indices = stickfigure.missing_draw_indices(&draw_indices);
+        let missing_indices = stickfigure.missing_draw_indices(draw_indices);
 
         let valid_indices: Vec<DrawOrderIndex> = draw_indices
             .iter()

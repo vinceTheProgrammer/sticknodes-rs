@@ -1,7 +1,7 @@
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
 use miniz_oxide::inflate::decompress_to_vec_zlib;
 use std::io::{Read, Seek, SeekFrom};
-use std::{format, rc::Rc, vec, vec::Vec};
+use std::{format, rc::Rc, vec::Vec};
 
 use core::cell::RefCell;
 
@@ -75,7 +75,7 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
             DrawOrderIndex(-1),
             1,
             &mut stickfigure,
-            vec![false],
+            &[false],
         )?;
     } else {
         if version > Stickfigure::default().version {
@@ -92,7 +92,7 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
             DrawOrderIndex(-1),
             1,
             &mut stickfigure,
-            vec![false],
+            &[false],
         )?;
 
         if stickfigure.version >= 230 {
@@ -139,15 +139,14 @@ fn read_child_nodes<E: ByteOrder>(
     parent_draw_index: DrawOrderIndex,
     number_of_child_nodes_to_read: i32,
     stickfigure: &mut Stickfigure,
-    connector_booleans_to_use: Vec<bool>,
+    connector_booleans_to_use: &[bool],
 ) -> Result<(), StickfigureError> {
-    for i in 0..number_of_child_nodes_to_read {
-        let is_connector = connector_booleans_to_use.get(i as usize).unwrap_or(&false);
+    for (i, _) in (0..number_of_child_nodes_to_read).enumerate() {
+        let is_connector = connector_booleans_to_use.get(i).unwrap_or(&false);
 
         let (node, number_of_child_nodes, connector_booleans) =
             read_node::<E>(reader, version, build, *is_connector)?;
 
-        let number_of_child_nodes = number_of_child_nodes;
         let draw_index = node.draw_order_index;
 
         if parent_draw_index.0 == -1 {
@@ -163,7 +162,7 @@ fn read_child_nodes<E: ByteOrder>(
             draw_index,
             number_of_child_nodes,
             stickfigure,
-            connector_booleans,
+            &connector_booleans,
         )?;
     }
 
@@ -179,11 +178,12 @@ fn read_node<E: ByteOrder>(
     let mut node = Node::new();
 
     if is_connector {
-        let mut connector_data = ConnectorData::default();
-
-        connector_data.local_x = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
-        connector_data.local_y = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
-        connector_data.percent = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
+        let mut connector_data = ConnectorData {
+            local_x: reader.read_f32::<E>().map_err(StickfigureError::Io)?,
+            local_y: reader.read_f32::<E>().map_err(StickfigureError::Io)?,
+            percent: reader.read_f32::<E>().map_err(StickfigureError::Io)?,
+            ..Default::default()
+        };
         if build >= 44 {
             connector_data.percent_default =
                 reader.read_f32::<E>().map_err(StickfigureError::Io)?;
@@ -191,7 +191,11 @@ fn read_node<E: ByteOrder>(
         connector_data.percent_default = connector_data.percent;
         connector_data.value = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
         let method = reader.read_i32::<E>().map_err(StickfigureError::Io)?;
-        connector_data.method = ConnectorMethod::from_integer(method as i8).unwrap_or_default();
+        // Allow justified because truncation would not throw out any useful information. There are only two connector methods as of writing this.
+        #[allow(clippy::cast_possible_truncation)]
+        {
+            connector_data.method = ConnectorMethod::from_integer(method as i8).unwrap_or_default();
+        }
         connector_data.reversed = reader.read_u8().map_err(StickfigureError::Io)? != 0;
         if build >= 65 {
             connector_data.smart_stretch_ancestral_value =
@@ -233,8 +237,12 @@ fn read_node<E: ByteOrder>(
     if version >= 403 && build >= 20 {
         let gradient_mode_short = reader.read_i16::<E>().map_err(StickfigureError::Io)?;
 
-        node.gradient_mode =
-            GradientMode::from_integer(gradient_mode_short as i8).unwrap_or_default();
+        // Allow justified because truncation would not throw out any useful information. There are only two gradient modes as of writing this.
+        #[allow(clippy::cast_possible_truncation)]
+        {
+            node.gradient_mode =
+                GradientMode::from_integer(gradient_mode_short as i8).unwrap_or_default();
+        }
     }
     node.use_segment_scale = reader.read_u8().map_err(StickfigureError::Io)? != 0;
     node.local_x = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
@@ -264,6 +272,9 @@ fn read_node<E: ByteOrder>(
         node.triangle_upside_down = reader.read_u8().map_err(StickfigureError::Io)? != 0;
     }
     if version >= 403 && build >= 36 {
+        // Allow justified because we can't avoid throwing out some precision without adding redundant i32 trapezoid thickness start/end fields
+        // Only figures from a small range of build versions will be effected
+        #[allow(clippy::cast_precision_loss)]
         if build < 64 {
             node.trapezoid_thickness_start =
                 reader.read_i32::<E>().map_err(StickfigureError::Io)? as f32;
@@ -422,6 +433,13 @@ fn read_polyfill_header<E: ByteOrder>(
 ) -> Result<Vec<Rc<RefCell<Polyfill>>>, StickfigureError> {
     let number_of_polyfills = reader.read_i32::<E>().map_err(StickfigureError::Io)?;
 
+    // Allow justified because wrapping and truncation would only matter at absurdly large polyfill counts
+    // Allow cast sign loss justified because number of polyfills should never be negative
+    #[allow(
+        clippy::cast_possible_wrap,
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss
+    )]
     let mut polyfills = Vec::with_capacity(number_of_polyfills as usize);
     for _ in 0..number_of_polyfills {
         let polyfill = Rc::new(RefCell::new(read_polyfill::<E>(reader)?));

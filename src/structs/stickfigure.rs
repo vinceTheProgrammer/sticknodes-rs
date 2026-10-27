@@ -41,6 +41,7 @@ pub const SUPPORTED_APP_BUILD: i32 = 72;
 #[serde(transparent)]
 pub struct DrawOrderIndex(pub i32);
 
+#[derive(Clone, Copy)]
 pub struct IWillNotAbuseUnlimitedNodes(pub bool);
 
 impl From<i32> for DrawOrderIndex {
@@ -129,7 +130,7 @@ impl Stickfigure {
     pub fn to_serializable(&self) -> SerializableStickfigure {
         let root_node =self.get_node(DrawOrderIndex(0)).expect("Possibly an internal bug, but please check if the stickfigure you're trying to serialize has its root node draw order index set as 0. If it is, this is probably a library bug. If it is not 0, then that might be on your end :p");
         let mut nodes = Vec::new();
-        let serializable_nodes = root_node.borrow().build_serializable_tree(
+        let serializable_nodes = Node::build_serializable_tree(
             &self.nodes,
             self.node_index_from_draw_order(root_node.borrow().draw_order_index),
         );
@@ -676,12 +677,19 @@ impl Stickfigure {
 
         // Reassign contiguous draw indices starting from 0
         for (new_draw_index, (_, node_index)) in indexed_nodes.into_iter().enumerate() {
+            // Allow justified because wrapping and truncation would only matter at absurdly large node counts
+            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
             let new_draw_index = DrawOrderIndex(new_draw_index as i32);
+
             self.remap_draw_index(node_index, new_draw_index);
         }
 
         // Update next_draw_index to be one past the highest used
-        self.next_draw_index = DrawOrderIndex(self.draw_index_map.len() as i32);
+        // Allow justified because wrapping and truncation would only matter at absurdly large node counts
+        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+        {
+            self.next_draw_index = DrawOrderIndex(self.draw_index_map.len() as i32);
+        }
     }
 
     fn check_if_can_add_node(

@@ -291,6 +291,8 @@ impl From<Color> for [f32; 4] {
 
 impl From<[f32; 4]> for Color {
     fn from(arr: [f32; 4]) -> Self {
+        // Allow justified because casting is necesary for this color format conversion
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         fn to_u8(v: f32) -> u8 {
             (v.clamp(0.0, 1.0) * 255.0).round() as u8
         }
