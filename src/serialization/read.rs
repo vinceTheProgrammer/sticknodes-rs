@@ -1,9 +1,7 @@
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
 use miniz_oxide::inflate::decompress_to_vec_zlib;
 use std::io::{Read, Seek, SeekFrom};
-use std::{format, rc::Rc, vec::Vec};
-
-use core::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     error::{LibraryError, StickfigureError},
@@ -15,6 +13,28 @@ use crate::{
     Color, ConnectorData, ConnectorMethod,
 };
 
+
+fn read_color(reader: &mut impl Read) -> Result<Color, StickfigureError> {
+    let mut channels = [0; 4];
+    reader.read_exact(&mut channels).map_err(StickfigureError::Io)?;
+    let [alpha, blue, green, red] = channels;
+    Ok(Color { alpha, blue, green, red })
+}
+
+fn validate_version(version: i32, build: i32) -> Result<(), LibraryError> {
+    let supported = Stickfigure::default();
+
+    if version > supported.version {
+        return Err(LibraryError::UnsupportedVersion(version));
+    }
+
+    if version == supported.version && build > supported.build {
+        return Err(LibraryError::UnsupportedBuild(version, build));
+    }
+
+    Ok(())
+}
+
 fn read_stickfigure_header<E: ByteOrder>(
     reader: &mut impl Read,
     stickfigure: &mut Stickfigure,
@@ -24,12 +44,7 @@ fn read_stickfigure_header<E: ByteOrder>(
         stickfigure.build = reader.read_i32::<E>().map_err(StickfigureError::Io)?;
     }
     stickfigure.scale = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
-    stickfigure.color = Color {
-        alpha: reader.read_u8().map_err(StickfigureError::Io)?,
-        blue: reader.read_u8().map_err(StickfigureError::Io)?,
-        green: reader.read_u8().map_err(StickfigureError::Io)?,
-        red: reader.read_u8().map_err(StickfigureError::Io)?,
-    };
+    stickfigure.color = read_color(reader)?;
 
     Ok(())
 }
@@ -61,12 +76,7 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
         version = stickfigure.version;
         build = stickfigure.build;
 
-        if version > Stickfigure::default().version {
-            return Err(LibraryError::UnsupportedVersion(version));
-        } else if version == Stickfigure::default().version && build > Stickfigure::default().build
-        {
-            return Err(LibraryError::UnsupportedBuild(version, build));
-        }
+        validate_version(version, build)?;
 
         read_child_nodes::<LittleEndian>(
             &mut decompressed_str,
@@ -78,12 +88,7 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
             &[false],
         )?;
     } else {
-        if version > Stickfigure::default().version {
-            return Err(LibraryError::UnsupportedVersion(version));
-        } else if version == Stickfigure::default().version && build > Stickfigure::default().build
-        {
-            return Err(LibraryError::UnsupportedBuild(version, build));
-        }
+        validate_version(version, build)?;
 
         read_child_nodes::<BigEndian>(
             reader,
@@ -119,12 +124,12 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
 
                 let connector_data = &mut connector_node.borrow_mut().connector_data;
 
-                match connector_data {
-                    Some(data) => {
-                        data.end_node_draw_index = DrawOrderIndex(end_draw_index);
-                    },
-                    None => return Err(StickfigureError::GenericError(format!("Attempted to get undefined connector data of node (while reading .nodes file). Node {my_draw_index:?}")))?,
-                }
+                let Some(data) = connector_data else {
+                    return Err(StickfigureError::GenericError(format!(
+                        "Attempted to get undefined connector data of node (while reading .nodes file). Node {my_draw_index:?}"
+                    )))?;
+                };
+                data.end_node_draw_index = DrawOrderIndex(end_draw_index);
             }
         }
     }
@@ -311,28 +316,13 @@ fn read_node<E: ByteOrder>(
         node.default_angle = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
     }
 
-    node.color = Color {
-        alpha: reader.read_u8().map_err(StickfigureError::Io)?,
-        blue: reader.read_u8().map_err(StickfigureError::Io)?,
-        green: reader.read_u8().map_err(StickfigureError::Io)?,
-        red: reader.read_u8().map_err(StickfigureError::Io)?,
-    };
+    node.color = read_color(reader)?;
 
     if version >= 176 {
-        node.gradient_color = Color {
-            alpha: reader.read_u8().map_err(StickfigureError::Io)?,
-            blue: reader.read_u8().map_err(StickfigureError::Io)?,
-            green: reader.read_u8().map_err(StickfigureError::Io)?,
-            red: reader.read_u8().map_err(StickfigureError::Io)?,
-        };
+        node.gradient_color = read_color(reader)?;
     }
     if version >= 256 {
-        node.circle_outline_color = Color {
-            alpha: reader.read_u8().map_err(StickfigureError::Io)?,
-            blue: reader.read_u8().map_err(StickfigureError::Io)?,
-            green: reader.read_u8().map_err(StickfigureError::Io)?,
-            red: reader.read_u8().map_err(StickfigureError::Io)?,
-        };
+        node.circle_outline_color = read_color(reader)?;
     }
 
     if version >= 403 && build >= 39 {
@@ -415,15 +405,13 @@ fn read_node<E: ByteOrder>(
         }
     }
 
-    if node.is_angle_locked {
-        if node.angle_lock_is_main_node {
-            node.angle_lock_mode = AngleLockMode::Absolute;
-        } else {
-            node.angle_lock_mode = AngleLockMode::Relative;
-        }
+    node.angle_lock_mode = if !node.is_angle_locked {
+        AngleLockMode::None
+    } else if node.angle_lock_is_main_node {
+        AngleLockMode::Absolute
     } else {
-        node.angle_lock_mode = AngleLockMode::None;
-    }
+        AngleLockMode::Relative
+    };
 
     Ok((node, number_of_child_nodes, connector_booleans))
 }
@@ -454,16 +442,7 @@ fn read_polyfill<E: ByteOrder>(reader: &mut impl Read) -> Result<Polyfill, Stick
 
     polyfill.anchor_node_draw_index.0 = reader.read_i32::<E>().map_err(StickfigureError::Io)?;
 
-    let mut buf = [0u8; 4];
-    reader.read_exact(&mut buf).map_err(StickfigureError::Io)?;
-    let [alpha, blue, green, red] = buf;
-
-    polyfill.color = Color {
-        alpha,
-        blue,
-        green,
-        red,
-    };
+    polyfill.color = read_color(reader)?;
     polyfill.use_polyfill_color = reader.read_u8().map_err(StickfigureError::Io)? != 0;
     let number_of_attached_nodes = reader.read_i32::<E>().map_err(StickfigureError::Io)?;
 
