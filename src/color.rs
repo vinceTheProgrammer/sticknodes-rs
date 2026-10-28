@@ -101,19 +101,11 @@ impl Color {
     }
 
     /// Parses a hex channel and preserves the original error format.
-    fn parse_hex_channel(
-        hex: &str,
-        start: usize,
-        end: usize,
-    ) -> Result<u8, ColorError> {
+    fn parse_hex_channel(hex: &str, start: usize, end: usize) -> Result<u8, ColorError> {
         let channel = &hex[start..end];
 
-        u8::from_str_radix(channel, 16).map_err(|_| {
-            ColorError::InvalidHexStringValue(
-                format!("#{hex}"),
-                channel.to_owned(),
-            )
-        })
+        u8::from_str_radix(channel, 16)
+            .map_err(|_| ColorError::InvalidHexStringValue(format!("#{hex}"), channel.to_owned()))
     }
 
     /// Converts the color to a hex string.

@@ -190,7 +190,9 @@ fn write_node(
     byte_vec.append(&mut write_node_connector_fields(version, build, rc_node)?);
     byte_vec.append(&mut write_node_header_fields(version, build, &node)?);
     byte_vec.append(&mut write_node_geometry_fields(version, build, &node)?);
-    byte_vec.append(&mut write_node_angle_and_color_fields(version, build, &node)?);
+    byte_vec.append(&mut write_node_angle_and_color_fields(
+        version, build, &node,
+    )?);
 
     Ok(byte_vec)
 }
@@ -608,14 +610,13 @@ fn write_node_angle_and_color_fields(
 ) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = write_node_angle_fields(version, node)?;
     byte_vec.append(&mut write_node_color_fields(version, node)?);
-    byte_vec.append(&mut write_node_angle_lock_and_drag_fields(version, build, node)?);
+    byte_vec.append(&mut write_node_angle_lock_and_drag_fields(
+        version, build, node,
+    )?);
     Ok(byte_vec)
 }
 
-fn write_node_angle_fields(
-    version: i32,
-    node: &Node,
-) -> Result<Vec<u8>, StickfigureError> {
+fn write_node_angle_fields(version: i32, node: &Node) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
     let mut node_angle_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
     let mut node_angle_writer = Cursor::new(&mut node_angle_bytes[..]);
@@ -635,10 +636,7 @@ fn write_node_angle_fields(
     Ok(byte_vec)
 }
 
-fn write_node_color_fields(
-    version: i32,
-    node: &Node,
-) -> Result<Vec<u8>, StickfigureError> {
+fn write_node_color_fields(version: i32, node: &Node) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
     let mut node_color_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
     let mut node_color_writer = Cursor::new(&mut node_color_bytes[..]);

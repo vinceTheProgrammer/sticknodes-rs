@@ -13,12 +13,18 @@ use crate::{
     Color, ConnectorData, ConnectorMethod,
 };
 
-
 fn read_color(reader: &mut impl Read) -> Result<Color, StickfigureError> {
     let mut channels = [0; 4];
-    reader.read_exact(&mut channels).map_err(StickfigureError::Io)?;
+    reader
+        .read_exact(&mut channels)
+        .map_err(StickfigureError::Io)?;
     let [alpha, blue, green, red] = channels;
-    Ok(Color { alpha, blue, green, red })
+    Ok(Color {
+        alpha,
+        blue,
+        green,
+        red,
+    })
 }
 
 fn validate_version(version: i32, build: i32) -> Result<(), LibraryError> {
@@ -276,7 +282,8 @@ fn read_node_flags<E: ByteOrder>(
         // Allow justified because truncation would not throw out any useful information. There are only two gradient modes as of writing this.
         #[allow(clippy::cast_possible_truncation)]
         {
-            node.gradient_mode = GradientMode::from_integer(gradient_mode as i8).unwrap_or_default();
+            node.gradient_mode =
+                GradientMode::from_integer(gradient_mode as i8).unwrap_or_default();
         }
     }
 
@@ -326,7 +333,8 @@ fn read_node_geometry<E: ByteOrder>(
             node.trapezoid_thickness_end =
                 reader.read_i32::<E>().map_err(StickfigureError::Io)? as f32;
         } else {
-            node.trapezoid_thickness_start = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
+            node.trapezoid_thickness_start =
+                reader.read_f32::<E>().map_err(StickfigureError::Io)?;
             node.trapezoid_thickness_end = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
         }
     }
@@ -337,7 +345,8 @@ fn read_node_geometry<E: ByteOrder>(
         node.use_trapezoid_thickness_end = reader.read_u8().map_err(StickfigureError::Io)? != 0;
     }
     if version >= 256 && build != 36 {
-        node.trapezoid_top_thickness_ratio = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
+        node.trapezoid_top_thickness_ratio =
+            reader.read_f32::<E>().map_err(StickfigureError::Io)?;
     }
     if version >= 403 && build >= 36 {
         node.trapezoid_is_rounded_start = reader.read_u8().map_err(StickfigureError::Io)? != 0;
