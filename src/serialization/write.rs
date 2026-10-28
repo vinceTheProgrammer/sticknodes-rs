@@ -1,8 +1,8 @@
-use core::cell::RefCell;
+use std::cell::RefCell;
 
 use byteorder::{BigEndian, WriteBytesExt};
 use std::io::{Cursor, Write};
-use std::{format, rc::Rc, vec::Vec};
+use std::rc::Rc;
 
 use crate::{
     error::{LibraryError, StickfigureError},
@@ -182,6 +182,23 @@ fn write_node(
     rc_node: &Rc<RefCell<Node>>,
     stickfigure: &Stickfigure,
 ) -> Result<Vec<u8>, StickfigureError> {
+    prepare_node_for_write(rc_node, stickfigure)?;
+
+    let node = rc_node.borrow();
+    let mut byte_vec = Vec::new();
+
+    byte_vec.append(&mut write_node_connector_fields(version, build, rc_node)?);
+    byte_vec.append(&mut write_node_header_fields(version, build, &node)?);
+    byte_vec.append(&mut write_node_geometry_fields(version, build, &node)?);
+    byte_vec.append(&mut write_node_angle_and_color_fields(version, build, &node)?);
+
+    Ok(byte_vec)
+}
+
+fn prepare_node_for_write(
+    rc_node: &Rc<RefCell<Node>>,
+    stickfigure: &Stickfigure,
+) -> Result<(), StickfigureError> {
     {
         let mut node = rc_node.borrow_mut();
 
@@ -254,10 +271,15 @@ fn write_node(
             ));
         }
     }
-    let node = rc_node.borrow();
+    Ok(())
+}
 
+fn write_node_connector_fields(
+    version: i32,
+    build: i32,
+    rc_node: &Rc<RefCell<Node>>,
+) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
-
     if version >= 403 && build >= 38 {
         if let Some(connector_data) = &rc_node.borrow().connector_data {
             let mut buffer_c1 = [0u8; 12]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
@@ -307,7 +329,15 @@ fn write_node(
             }
         }
     }
+    Ok(byte_vec)
+}
 
+fn write_node_header_fields(
+    version: i32,
+    build: i32,
+    node: &Node,
+) -> Result<Vec<u8>, StickfigureError> {
+    let mut byte_vec = Vec::new();
     let mut node_header_bytes = [0u8; 7]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
     let mut node_header_writer = Cursor::new(&mut node_header_bytes[..]);
     node_header_writer
@@ -401,7 +431,22 @@ fn write_node(
             .map_err(StickfigureError::Io)?;
         byte_vec.append(&mut Vec::from(field_bytes));
     }
+    Ok(byte_vec)
+}
 
+fn write_node_geometry_fields(
+    version: i32,
+    build: i32,
+    node: &Node,
+) -> Result<Vec<u8>, StickfigureError> {
+    let mut byte_vec = write_node_base_geometry(node)?;
+    byte_vec.append(&mut write_node_curve_fields(version, build, node)?);
+    byte_vec.append(&mut write_node_shape_fields(version, build, node)?);
+    Ok(byte_vec)
+}
+
+fn write_node_base_geometry(node: &Node) -> Result<Vec<u8>, StickfigureError> {
+    let mut byte_vec = Vec::new();
     let mut node_geometry_bytes = [0u8; 29]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
     let mut node_geometry_writer = Cursor::new(&mut node_geometry_bytes[..]);
     node_geometry_writer
@@ -429,7 +474,15 @@ fn write_node(
         .write_i32::<BigEndian>(node.thickness)
         .map_err(StickfigureError::Io)?;
     byte_vec.append(&mut Vec::from(node_geometry_bytes));
+    Ok(byte_vec)
+}
 
+fn write_node_curve_fields(
+    version: i32,
+    build: i32,
+    node: &Node,
+) -> Result<Vec<u8>, StickfigureError> {
+    let mut byte_vec = Vec::new();
     if version >= 320 {
         let mut field_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
         let mut field_writer = Cursor::new(&mut field_bytes[..]);
@@ -454,6 +507,16 @@ fn write_node(
             .map_err(StickfigureError::Io)?;
         byte_vec.append(&mut Vec::from(field_bytes));
     }
+    Ok(byte_vec)
+}
+
+fn write_node_shape_fields(
+    version: i32,
+    build: i32,
+    node: &Node,
+) -> Result<Vec<u8>, StickfigureError> {
+    let mut byte_vec = Vec::new();
+
     if version >= 256 {
         let mut field_bytes = [0u8; 3]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
         let mut field_writer = Cursor::new(&mut field_bytes[..]);
@@ -535,7 +598,25 @@ fn write_node(
             .map_err(StickfigureError::Io)?;
         byte_vec.append(&mut Vec::from(field_bytes));
     }
+    Ok(byte_vec)
+}
 
+fn write_node_angle_and_color_fields(
+    version: i32,
+    build: i32,
+    node: &Node,
+) -> Result<Vec<u8>, StickfigureError> {
+    let mut byte_vec = write_node_angle_fields(version, node)?;
+    byte_vec.append(&mut write_node_color_fields(version, node)?);
+    byte_vec.append(&mut write_node_angle_lock_and_drag_fields(version, build, node)?);
+    Ok(byte_vec)
+}
+
+fn write_node_angle_fields(
+    version: i32,
+    node: &Node,
+) -> Result<Vec<u8>, StickfigureError> {
+    let mut byte_vec = Vec::new();
     let mut node_angle_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
     let mut node_angle_writer = Cursor::new(&mut node_angle_bytes[..]);
     node_angle_writer
@@ -551,7 +632,14 @@ fn write_node(
             .map_err(StickfigureError::Io)?;
         byte_vec.append(&mut Vec::from(field_bytes));
     }
+    Ok(byte_vec)
+}
 
+fn write_node_color_fields(
+    version: i32,
+    node: &Node,
+) -> Result<Vec<u8>, StickfigureError> {
+    let mut byte_vec = Vec::new();
     let mut node_color_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
     let mut node_color_writer = Cursor::new(&mut node_color_bytes[..]);
     node_color_writer
@@ -590,6 +678,26 @@ fn write_node(
             .map_err(StickfigureError::Io)?;
         byte_vec.append(&mut Vec::from(field_bytes));
     }
+    Ok(byte_vec)
+}
+
+fn write_node_angle_lock_and_drag_fields(
+    version: i32,
+    build: i32,
+    node: &Node,
+) -> Result<Vec<u8>, StickfigureError> {
+    let mut byte_vec = write_node_angle_lock_fields(version, build, node)?;
+    byte_vec.append(&mut write_node_drag_fields(version, build, node)?);
+    Ok(byte_vec)
+}
+
+fn write_node_angle_lock_fields(
+    version: i32,
+    build: i32,
+    node: &Node,
+) -> Result<Vec<u8>, StickfigureError> {
+    let mut byte_vec = Vec::new();
+
     if version >= 403 && build >= 39 {
         let mut field_bytes = [0u8; 1]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
         let mut field_writer = Cursor::new(&mut field_bytes[..]);
@@ -657,6 +765,15 @@ fn write_node(
             .map_err(StickfigureError::Io)?;
         byte_vec.append(&mut Vec::from(field_bytes));
     }
+    Ok(byte_vec)
+}
+
+fn write_node_drag_fields(
+    version: i32,
+    build: i32,
+    node: &Node,
+) -> Result<Vec<u8>, StickfigureError> {
+    let mut byte_vec = Vec::new();
     if version >= 403 && build >= 39 {
         if build <= 40 {
             let mut field_bytes = [0u8; 2]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
@@ -698,7 +815,6 @@ fn write_node(
         let field_bytes = [0u8; 1]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
         byte_vec.append(&mut Vec::from(field_bytes));
     }
-
     Ok(byte_vec)
 }
 
