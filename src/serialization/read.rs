@@ -183,38 +183,70 @@ fn read_node<E: ByteOrder>(
     let mut node = Node::new();
 
     if is_connector {
-        let mut connector_data = ConnectorData {
-            local_x: reader.read_f32::<E>().map_err(StickfigureError::Io)?,
-            local_y: reader.read_f32::<E>().map_err(StickfigureError::Io)?,
-            percent: reader.read_f32::<E>().map_err(StickfigureError::Io)?,
-            ..Default::default()
-        };
-        if build >= 44 {
-            connector_data.percent_default =
-                reader.read_f32::<E>().map_err(StickfigureError::Io)?;
-        }
-        connector_data.percent_default = connector_data.percent;
-        connector_data.value = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
-        let method = reader.read_i32::<E>().map_err(StickfigureError::Io)?;
-        // Allow justified because truncation would not throw out any useful information. There are only two connector methods as of writing this.
-        #[allow(clippy::cast_possible_truncation)]
-        {
-            connector_data.method = ConnectorMethod::from_integer(method as i8).unwrap_or_default();
-        }
-        connector_data.reversed = reader.read_u8().map_err(StickfigureError::Io)? != 0;
-        if build >= 65 {
-            connector_data.smart_stretch_ancestral_value =
-                reader.read_f32::<E>().map_err(StickfigureError::Io)?;
-        }
-        connector_data.smart_stretch_ancestral_value = 1.0;
-        node.connector_data = Some(connector_data);
+        node.connector_data = Some(read_connector_data::<E>(reader, build)?);
     }
 
+    read_node_flags::<E>(reader, &mut node, version, build)?;
+    read_node_geometry::<E>(reader, &mut node, version, build)?;
+    read_node_colors(reader, &mut node, version)?;
+    read_node_angle_lock::<E>(reader, &mut node, version, build)?;
+
+    let (number_of_child_nodes, connector_booleans) =
+        read_node_children_metadata::<E>(reader, version, build)?;
+
+    initialize_node_derived_fields(&mut node);
+
+    Ok((node, number_of_child_nodes, connector_booleans))
+}
+
+fn read_connector_data<E: ByteOrder>(
+    reader: &mut impl Read,
+    build: i32,
+) -> Result<ConnectorData, StickfigureError> {
+    let mut connector_data = ConnectorData {
+        local_x: reader.read_f32::<E>().map_err(StickfigureError::Io)?,
+        local_y: reader.read_f32::<E>().map_err(StickfigureError::Io)?,
+        percent: reader.read_f32::<E>().map_err(StickfigureError::Io)?,
+        ..Default::default()
+    };
+
+    if build >= 44 {
+        connector_data.percent_default = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
+    }
+
+    connector_data.percent_default = connector_data.percent;
+    connector_data.value = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
+
+    let method = reader.read_i32::<E>().map_err(StickfigureError::Io)?;
+    // Allow justified because truncation would not throw out any useful information. There are only two connector methods as of writing this.
+    #[allow(clippy::cast_possible_truncation)]
+    {
+        connector_data.method = ConnectorMethod::from_integer(method as i8).unwrap_or_default();
+    }
+
+    connector_data.reversed = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+    if build >= 65 {
+        connector_data.smart_stretch_ancestral_value =
+            reader.read_f32::<E>().map_err(StickfigureError::Io)?;
+    }
+
+    connector_data.smart_stretch_ancestral_value = 1.0;
+
+    Ok(connector_data)
+}
+
+fn read_node_flags<E: ByteOrder>(
+    reader: &mut impl Read,
+    node: &mut Node,
+    version: i32,
+    build: i32,
+) -> Result<(), StickfigureError> {
     node.node_type =
         NodeType::from_integer(reader.read_i8().map_err(StickfigureError::Io)?).unwrap_or_default();
     node.draw_order_index.0 = reader.read_i32::<E>().map_err(StickfigureError::Io)?;
     node.is_static = reader.read_u8().map_err(StickfigureError::Io)? != 0;
     node.is_stretchy = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+
     if version >= 403 && build >= 48 {
         node.is_floaty = reader.read_u8().map_err(StickfigureError::Io)? != 0;
     }
@@ -240,15 +272,23 @@ fn read_node<E: ByteOrder>(
         node.reverse_gradient = reader.read_u8().map_err(StickfigureError::Io)? != 0;
     }
     if version >= 403 && build >= 20 {
-        let gradient_mode_short = reader.read_i16::<E>().map_err(StickfigureError::Io)?;
-
+        let gradient_mode = reader.read_i16::<E>().map_err(StickfigureError::Io)?;
         // Allow justified because truncation would not throw out any useful information. There are only two gradient modes as of writing this.
         #[allow(clippy::cast_possible_truncation)]
         {
-            node.gradient_mode =
-                GradientMode::from_integer(gradient_mode_short as i8).unwrap_or_default();
+            node.gradient_mode = GradientMode::from_integer(gradient_mode as i8).unwrap_or_default();
         }
     }
+
+    Ok(())
+}
+
+fn read_node_geometry<E: ByteOrder>(
+    reader: &mut impl Read,
+    node: &mut Node,
+    version: i32,
+    build: i32,
+) -> Result<(), StickfigureError> {
     node.use_segment_scale = reader.read_u8().map_err(StickfigureError::Io)? != 0;
     node.local_x = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
     node.local_y = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
@@ -277,8 +317,8 @@ fn read_node<E: ByteOrder>(
         node.triangle_upside_down = reader.read_u8().map_err(StickfigureError::Io)? != 0;
     }
     if version >= 403 && build >= 36 {
-        // Allow justified because we can't avoid throwing out some precision without adding redundant i32 trapezoid thickness start/end fields
-        // Only figures from a small range of build versions will be effected
+        // Older builds serialize these values as integers; newer builds use floats.
+        // Precision loss is inherent in the legacy integer representation.
         #[allow(clippy::cast_precision_loss)]
         if build < 64 {
             node.trapezoid_thickness_start =
@@ -286,8 +326,7 @@ fn read_node<E: ByteOrder>(
             node.trapezoid_thickness_end =
                 reader.read_i32::<E>().map_err(StickfigureError::Io)? as f32;
         } else {
-            node.trapezoid_thickness_start =
-                reader.read_f32::<E>().map_err(StickfigureError::Io)?;
+            node.trapezoid_thickness_start = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
             node.trapezoid_thickness_end = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
         }
     }
@@ -298,8 +337,7 @@ fn read_node<E: ByteOrder>(
         node.use_trapezoid_thickness_end = reader.read_u8().map_err(StickfigureError::Io)? != 0;
     }
     if version >= 256 && build != 36 {
-        node.trapezoid_top_thickness_ratio =
-            reader.read_f32::<E>().map_err(StickfigureError::Io)?;
+        node.trapezoid_top_thickness_ratio = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
     }
     if version >= 403 && build >= 36 {
         node.trapezoid_is_rounded_start = reader.read_u8().map_err(StickfigureError::Io)? != 0;
@@ -316,15 +354,30 @@ fn read_node<E: ByteOrder>(
         node.default_angle = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
     }
 
-    node.color = read_color(reader)?;
+    Ok(())
+}
 
+fn read_node_colors(
+    reader: &mut impl Read,
+    node: &mut Node,
+    version: i32,
+) -> Result<(), StickfigureError> {
+    node.color = read_color(reader)?;
     if version >= 176 {
         node.gradient_color = read_color(reader)?;
     }
     if version >= 256 {
         node.circle_outline_color = read_color(reader)?;
     }
+    Ok(())
+}
 
+fn read_node_angle_lock<E: ByteOrder>(
+    reader: &mut impl Read,
+    node: &mut Node,
+    version: i32,
+    build: i32,
+) -> Result<(), StickfigureError> {
     if version >= 403 && build >= 39 {
         node.is_angle_locked = reader.read_u8().map_err(StickfigureError::Io)? != 0;
         if build <= 50 {
@@ -357,11 +410,11 @@ fn read_node<E: ByteOrder>(
         node.angle_lock_relative_multiplier = reader.read_i8().map_err(StickfigureError::Io)?;
     }
     if version >= 403 && build >= 39 {
-        if build <= 40 {
-            node.is_drag_locked = reader.read_i16::<E>().map_err(StickfigureError::Io)? != 0;
+        node.is_drag_locked = if build <= 40 {
+            reader.read_i16::<E>().map_err(StickfigureError::Io)? != 0
         } else {
-            node.is_drag_locked = reader.read_u8().map_err(StickfigureError::Io)? != 0;
-        }
+            reader.read_u8().map_err(StickfigureError::Io)? != 0
+        };
     }
     if version >= 403 && (41..=45).contains(&build) {
         reader.read_i16::<E>().map_err(StickfigureError::Io)?;
@@ -369,23 +422,34 @@ fn read_node<E: ByteOrder>(
     if version >= 403 && build >= 46 {
         node.drag_lock_angle = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
     }
-
     if version >= 403 && build >= 41 {
         node.smart_stretch_multiplier = reader.read_f32::<E>().map_err(StickfigureError::Io)?;
     }
     if version >= 403 && (41..=45).contains(&build) {
         reader.read_u8().map_err(StickfigureError::Io)?;
     }
-    let number_of_child_nodes = reader.read_i32::<E>().map_err(StickfigureError::Io)?;
 
+    Ok(())
+}
+
+fn read_node_children_metadata<E: ByteOrder>(
+    reader: &mut impl Read,
+    version: i32,
+    build: i32,
+) -> Result<(i32, Vec<bool>), StickfigureError> {
+    let number_of_child_nodes = reader.read_i32::<E>().map_err(StickfigureError::Io)?;
     let mut connector_booleans = Vec::new();
+
     if version >= 403 && build > 38 {
         for _ in 0..number_of_child_nodes {
-            let bool = reader.read_i32::<E>().map_err(StickfigureError::Io)? != 0;
-            connector_booleans.push(bool);
+            connector_booleans.push(reader.read_i32::<E>().map_err(StickfigureError::Io)? != 0);
         }
     }
 
+    Ok((number_of_child_nodes, connector_booleans))
+}
+
+fn initialize_node_derived_fields(node: &mut Node) {
     match node.right_triangle_direction {
         -1 => {
             node.triangle_type = TriangleType::RightTriangle;
@@ -412,8 +476,6 @@ fn read_node<E: ByteOrder>(
     } else {
         AngleLockMode::Relative
     };
-
-    Ok((node, number_of_child_nodes, connector_booleans))
 }
 
 fn read_polyfill_header<E: ByteOrder>(
