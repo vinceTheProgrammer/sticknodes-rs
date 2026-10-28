@@ -14,6 +14,7 @@ use super::stickfigure::DrawOrderIndex;
 use core::cell::RefCell;
 use std::{rc::Rc, vec::Vec};
 
+#[allow(clippy::struct_excessive_bools)] // Perhaps look into restructuring these structs later to be more idiomatic, but for now the cope is that they more closely match the .nodes file format
 #[derive(Debug, Clone)]
 pub struct Node {
     pub node_type: NodeType,
@@ -146,6 +147,7 @@ impl Default for Node {
     }
 }
 
+#[allow(clippy::struct_excessive_bools)] // Perhaps look into restructuring these structs later to be more idiomatic, but for now the cope is that they more closely match the .nodes file format
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SerializableNode {
     pub node_type: NodeType,
@@ -197,6 +199,7 @@ pub struct SerializableNode {
     pub children: Vec<SerializableNode>,
 }
 
+#[allow(clippy::struct_excessive_bools)] // Perhaps look into restructuring these structs later to be more idiomatic, but for now the cope is that they more closely match the .nodes file format
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NodeOptions {
     pub node_type: NodeType,
