@@ -16,7 +16,6 @@ default = []
 tryreadanyway = []
 
 [dependencies]
-byteorder = "1.5"
 miniz_oxide = { version = "0.8.8", features = ["with-alloc"] }
 petgraph = { version = "0.8.1", features = ["serde-1"] }
 serde = { version = "1.0.219", features = ["derive"] }

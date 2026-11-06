@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 
-use byteorder::{BigEndian, WriteBytesExt};
-use std::io::{Cursor, Write};
+use std::io::{self, Write};
 use std::rc::Rc;
 
 use crate::{
@@ -14,29 +13,69 @@ use crate::{
     ConnectorMethod,
 };
 
+
+/// Writes big-endian numeric values into an underlying `Write` implementation.
+///
+/// The stickfigure file format currently writes its numeric fields in big-endian
+/// order, so the byte order is fixed here rather than selected for every field.
+struct BinaryWriter<W> {
+    inner: W,
+}
+
+impl<W: Write> BinaryWriter<W> {
+    fn new(inner: W) -> Self {
+        Self { inner }
+    }
+
+    fn write_i8(&mut self, value: i8) -> io::Result<()> {
+        self.inner.write_all(&value.to_be_bytes())
+    }
+
+    fn write_u8(&mut self, value: u8) -> io::Result<()> {
+        self.inner.write_all(&value.to_be_bytes())
+    }
+
+    fn write_i16(&mut self, value: i16) -> io::Result<()> {
+        self.inner.write_all(&value.to_be_bytes())
+    }
+
+    fn write_i32(&mut self, value: i32) -> io::Result<()> {
+        self.inner.write_all(&value.to_be_bytes())
+    }
+
+    fn write_f32(&mut self, value: f32) -> io::Result<()> {
+        self.inner.write_all(&value.to_be_bytes())
+    }
+}
+
+impl<W: Write> Write for BinaryWriter<W> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.inner.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.inner.flush()
+    }
+}
+
 fn write_stickfigure_header(stickfigure: &Stickfigure) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
 
-    let mut output_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-    let mut byte_writer = Cursor::new(&mut output_bytes[..]);
+    let mut byte_writer = BinaryWriter::new(&mut byte_vec);
     byte_writer
-        .write_i32::<BigEndian>(stickfigure.version)
+        .write_i32(stickfigure.version)
         .map_err(StickfigureError::Io)?;
-    byte_vec.append(&mut Vec::from(output_bytes));
 
     if stickfigure.version >= 403 {
-        let mut field_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
-            .write_i32::<BigEndian>(stickfigure.build)
+            .write_i32(stickfigure.build)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
 
-    let mut segment_color_bytes = [0u8; 8]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-    let mut segment_color_writer = Cursor::new(&mut segment_color_bytes[..]);
+    let mut segment_color_writer = BinaryWriter::new(&mut byte_vec);
     segment_color_writer
-        .write_f32::<BigEndian>(stickfigure.scale)
+        .write_f32(stickfigure.scale)
         .map_err(StickfigureError::Io)?;
     segment_color_writer
         .write_all(&[
@@ -46,7 +85,6 @@ fn write_stickfigure_header(stickfigure: &Stickfigure) -> Result<Vec<u8>, Stickf
             stickfigure.color.red,
         ])
         .map_err(StickfigureError::Io)?;
-    byte_vec.append(&mut Vec::from(segment_color_bytes));
 
     Ok(byte_vec)
 }
@@ -80,21 +118,18 @@ fn write_connector_data(stickfigure: &Stickfigure) -> Result<Vec<u8>, Stickfigur
     let connector_nodes =
         stickfigure.get_nodes_with_property(|node| node.borrow().connector_data.is_some());
 
-    let mut output_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-    let mut byte_writer = Cursor::new(&mut output_bytes[..]);
+    let mut byte_writer = BinaryWriter::new(&mut byte_vec);
     // Allow justified because wrapping and truncation would only matter at absurdly large node counts
     #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
     byte_writer
-        .write_i32::<BigEndian>(connector_nodes.len() as i32)
+        .write_i32(connector_nodes.len() as i32)
         .map_err(StickfigureError::Io)?;
-    byte_vec.append(&mut Vec::from(output_bytes));
 
     for draw_index in connector_nodes {
         let connector_node = stickfigure.get_node(draw_index).ok_or_else(|| StickfigureError::InvalidDrawIndex(draw_index.0, "Attempted to get connector node that does not exist when writing .nodes. Probably a library bug.".to_string()))?;
-        let mut field_bytes: [u8; 8] = [0u8; 8]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
-            .write_i32::<BigEndian>(connector_node.borrow().get_draw_order_index().0)
+            .write_i32(connector_node.borrow().get_draw_order_index().0)
             .map_err(StickfigureError::Io)?;
 
         let connector_data = &mut connector_node.borrow_mut().connector_data;
@@ -102,12 +137,10 @@ fn write_connector_data(stickfigure: &Stickfigure) -> Result<Vec<u8>, Stickfigur
         match connector_data {
             Some(data) => {
                 field_writer
-                    .write_i32::<BigEndian>(data.end_node_draw_index.0).map_err(StickfigureError::Io)?;
+                    .write_i32(data.end_node_draw_index.0).map_err(StickfigureError::Io)?;
             },
             None => return Err(StickfigureError::GenericError(format!("Attempted to get undefined connector data of node (while writing .nodes file). Node {draw_index:?}.")))?,
         }
-
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
 
     Ok(byte_vec)
@@ -138,23 +171,19 @@ fn write_child_nodes(
         #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
         let number_of_child_nodes = children.len() as i32;
 
-        let mut output_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut byte_writer = Cursor::new(&mut output_bytes[..]);
+        let mut byte_writer = BinaryWriter::new(&mut byte_vec);
         byte_writer
-            .write_i32::<BigEndian>(number_of_child_nodes)
+            .write_i32(number_of_child_nodes)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(output_bytes));
 
         if version >= 403 && build > 38 {
             for draw_index in &children {
                 if let Some(node) = stickfigure.get_node(*draw_index) {
                     let connector_data_present = node.borrow().connector_data.is_some();
-                    let mut output_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-                    let mut byte_writer = Cursor::new(&mut output_bytes[..]);
+                    let mut byte_writer = BinaryWriter::new(&mut byte_vec);
                     byte_writer
-                        .write_i32::<BigEndian>(i32::from(connector_data_present))
+                        .write_i32(i32::from(connector_data_present))
                         .map_err(StickfigureError::Io)?;
-                    byte_vec.append(&mut Vec::from(output_bytes));
                 } else {
                     return Err(StickfigureError::GenericError(
                         "Failed to get child node from index (while writing .nodes).".to_string(),
@@ -284,50 +313,42 @@ fn write_node_connector_fields(
     let mut byte_vec = Vec::new();
     if version >= 403 && build >= 38 {
         if let Some(connector_data) = &rc_node.borrow().connector_data {
-            let mut buffer_c1 = [0u8; 12]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-            let mut cursor_c1 = Cursor::new(&mut buffer_c1[..]);
+            let mut cursor_c1 = BinaryWriter::new(&mut byte_vec);
             cursor_c1
-                .write_f32::<BigEndian>(connector_data.local_x)
+                .write_f32(connector_data.local_x)
                 .map_err(StickfigureError::Io)?;
             cursor_c1
-                .write_f32::<BigEndian>(connector_data.local_y)
+                .write_f32(connector_data.local_y)
                 .map_err(StickfigureError::Io)?;
             cursor_c1
-                .write_f32::<BigEndian>(connector_data.percent)
+                .write_f32(connector_data.percent)
                 .map_err(StickfigureError::Io)?;
-            byte_vec.append(&mut Vec::from(buffer_c1));
 
             if build >= 44 {
-                let mut buffer_c2 = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-                let mut cursor_c2 = Cursor::new(&mut buffer_c2[..]);
+                let mut cursor_c2 = BinaryWriter::new(&mut byte_vec);
                 cursor_c2
-                    .write_f32::<BigEndian>(connector_data.percent_default)
+                    .write_f32(connector_data.percent_default)
                     .map_err(StickfigureError::Io)?;
-                byte_vec.append(&mut Vec::from(buffer_c2));
             }
 
-            let mut buffer_c3 = [0u8; 9]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-            let mut cursor_c3 = Cursor::new(&mut buffer_c3[..]);
+            let mut cursor_c3 = BinaryWriter::new(&mut byte_vec);
             cursor_c3
-                .write_f32::<BigEndian>(connector_data.value)
+                .write_f32(connector_data.value)
                 .map_err(StickfigureError::Io)?;
             cursor_c3
-                .write_i32::<BigEndian>(i32::from(ConnectorMethod::to_integer(
+                .write_i32(i32::from(ConnectorMethod::to_integer(
                     &connector_data.method,
                 )))
                 .map_err(StickfigureError::Io)?;
             cursor_c3
                 .write_u8(u8::from(connector_data.reversed))
                 .map_err(StickfigureError::Io)?;
-            byte_vec.append(&mut Vec::from(buffer_c3));
 
             if build >= 65 {
-                let mut buffer_c4 = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-                let mut cursor_c4 = Cursor::new(&mut buffer_c4[..]);
+                let mut cursor_c4 = BinaryWriter::new(&mut byte_vec);
                 cursor_c4
-                    .write_f32::<BigEndian>(connector_data.smart_stretch_ancestral_value)
+                    .write_f32(connector_data.smart_stretch_ancestral_value)
                     .map_err(StickfigureError::Io)?;
-                byte_vec.append(&mut Vec::from(buffer_c4));
             }
         }
     }
@@ -340,13 +361,12 @@ fn write_node_header_fields(
     node: &Node,
 ) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
-    let mut node_header_bytes = [0u8; 7]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-    let mut node_header_writer = Cursor::new(&mut node_header_bytes[..]);
+    let mut node_header_writer = BinaryWriter::new(&mut byte_vec);
     node_header_writer
         .write_i8(node.node_type.to_integer())
         .map_err(StickfigureError::Io)?;
     node_header_writer
-        .write_i32::<BigEndian>(node.draw_order_index.0)
+        .write_i32(node.draw_order_index.0)
         .map_err(StickfigureError::Io)?;
     node_header_writer
         .write_u8(u8::from(node.is_static))
@@ -354,84 +374,65 @@ fn write_node_header_fields(
     node_header_writer
         .write_u8(u8::from(node.is_stretchy))
         .map_err(StickfigureError::Io)?;
-    byte_vec.append(&mut Vec::from(node_header_bytes));
 
     if version >= 403 && build >= 48 {
-        let mut field_bytes = [0u8; 1]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
             .write_u8(u8::from(node.is_floaty))
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
 
     if version >= 248 {
-        let mut field_bytes = [0u8; 1]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
             .write_u8(u8::from(node.is_smart_stretch))
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 252 {
-        let mut field_bytes = [0u8; 1]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
             .write_u8(u8::from(node.do_not_apply_smart_stretch))
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
 
     if version >= 403 && build >= 50 {
-        let mut field_bytes = [0u8; 1]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
             .write_u8(u8::from(node.smart_stretch_reset_impulse))
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
 
-    let mut segment_color_bytes = [0u8; 1]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-    let mut segment_color_writer = Cursor::new(&mut segment_color_bytes[..]);
+    let mut segment_color_writer = BinaryWriter::new(&mut byte_vec);
     segment_color_writer
         .write_u8(u8::from(node.use_segment_color))
         .map_err(StickfigureError::Io)?;
-    byte_vec.append(&mut Vec::from(segment_color_bytes));
 
     if version >= 256 {
-        let mut field_bytes = [0u8; 1]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
             .write_u8(u8::from(node.use_circle_outline))
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 403 && build >= 21 {
-        let mut field_bytes = [0u8; 1]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
             .write_u8(u8::from(node.circle_is_hollow))
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 176 {
-        let mut field_bytes = [0u8; 2]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
             .write_u8(u8::from(node.use_gradient))
             .map_err(StickfigureError::Io)?;
         field_writer
             .write_u8(u8::from(node.reverse_gradient))
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 403 && build >= 20 {
-        let mut field_bytes = [0u8; 2]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
-            .write_i16::<BigEndian>(i16::from(GradientMode::to_integer(&node.gradient_mode)))
+            .write_i16(i16::from(GradientMode::to_integer(&node.gradient_mode)))
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     Ok(byte_vec)
 }
@@ -449,33 +450,31 @@ fn write_node_geometry_fields(
 
 fn write_node_base_geometry(node: &Node) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
-    let mut node_geometry_bytes = [0u8; 29]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-    let mut node_geometry_writer = Cursor::new(&mut node_geometry_bytes[..]);
+    let mut node_geometry_writer = BinaryWriter::new(&mut byte_vec);
     node_geometry_writer
         .write_u8(u8::from(node.use_segment_scale))
         .map_err(StickfigureError::Io)?;
     node_geometry_writer
-        .write_f32::<BigEndian>(node.local_x)
+        .write_f32(node.local_x)
         .map_err(StickfigureError::Io)?;
     node_geometry_writer
-        .write_f32::<BigEndian>(node.local_y)
+        .write_f32(node.local_y)
         .map_err(StickfigureError::Io)?;
     node_geometry_writer
-        .write_f32::<BigEndian>(node.scale)
+        .write_f32(node.scale)
         .map_err(StickfigureError::Io)?;
     node_geometry_writer
-        .write_f32::<BigEndian>(node.default_length)
+        .write_f32(node.default_length)
         .map_err(StickfigureError::Io)?;
     node_geometry_writer
-        .write_f32::<BigEndian>(node.length)
+        .write_f32(node.length)
         .map_err(StickfigureError::Io)?;
     node_geometry_writer
-        .write_i32::<BigEndian>(node.default_thickness)
+        .write_i32(node.default_thickness)
         .map_err(StickfigureError::Io)?;
     node_geometry_writer
-        .write_i32::<BigEndian>(node.thickness)
+        .write_i32(node.thickness)
         .map_err(StickfigureError::Io)?;
-    byte_vec.append(&mut Vec::from(node_geometry_bytes));
     Ok(byte_vec)
 }
 
@@ -486,28 +485,22 @@ fn write_node_curve_fields(
 ) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
     if version >= 320 {
-        let mut field_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
-            .write_i32::<BigEndian>(node.segment_curve_radius_and_default_curve_radius)
+            .write_i32(node.segment_curve_radius_and_default_curve_radius)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 403 && build >= 20 {
-        let mut field_bytes = [0u8; 1]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
             .write_u8(u8::from(node.curve_circulization))
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 403 && build >= 21 {
-        let mut field_bytes = [0u8; 2]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
-            .write_i16::<BigEndian>(node.segment_curve_polyfill_precision)
+            .write_i16(node.segment_curve_polyfill_precision)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     Ok(byte_vec)
 }
@@ -520,85 +513,70 @@ fn write_node_shape_fields(
     let mut byte_vec = Vec::new();
 
     if version >= 256 {
-        let mut field_bytes = [0u8; 3]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
             .write_u8(u8::from(node.half_arc))
             .map_err(StickfigureError::Io)?;
         field_writer
-            .write_i16::<BigEndian>(node.right_triangle_direction)
+            .write_i16(node.right_triangle_direction)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 300 {
-        let mut field_bytes = [0u8; 1]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
             .write_u8(u8::from(node.triangle_upside_down))
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 403 && build >= 36 {
-        let mut field_bytes = [0u8; 8]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         // Allow justified because we can't avoid truncating without adding redundant i32 trapezoid thickness start/end fields
         // Only figures from a small range of build versions will be effected
         #[allow(clippy::cast_possible_truncation)]
         if build < 64 {
             field_writer
-                .write_i32::<BigEndian>(node.trapezoid_thickness_start as i32)
+                .write_i32(node.trapezoid_thickness_start as i32)
                 .map_err(StickfigureError::Io)?;
             field_writer
-                .write_i32::<BigEndian>(node.trapezoid_thickness_end as i32)
+                .write_i32(node.trapezoid_thickness_end as i32)
                 .map_err(StickfigureError::Io)?;
         } else {
             field_writer
-                .write_f32::<BigEndian>(node.trapezoid_thickness_start)
+                .write_f32(node.trapezoid_thickness_start)
                 .map_err(StickfigureError::Io)?;
             field_writer
-                .write_f32::<BigEndian>(node.trapezoid_thickness_end)
+                .write_f32(node.trapezoid_thickness_end)
                 .map_err(StickfigureError::Io)?;
         }
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 403 && build == 36 {
-        let field_bytes = [0u8; 8]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        byte_vec.append(&mut Vec::from(field_bytes));
+        byte_vec.extend_from_slice(&[0u8; 8]);
     }
     if version >= 256 && build != 36 {
-        let mut field_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
-            .write_f32::<BigEndian>(node.trapezoid_top_thickness_ratio)
+            .write_f32(node.trapezoid_top_thickness_ratio)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 403 && build >= 36 {
-        let mut field_bytes = [0u8; 2]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
             .write_u8(u8::from(node.trapezoid_is_rounded_start))
             .map_err(StickfigureError::Io)?;
         field_writer
             .write_u8(u8::from(node.trapezoid_is_rounded_end))
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 256 {
-        let mut field_bytes = [0u8; 2]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
-            .write_i16::<BigEndian>(node.num_polygon_vertices)
+            .write_i16(node.num_polygon_vertices)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 248 {
-        let mut field_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
-            .write_f32::<BigEndian>(node.default_local_angle)
+            .write_f32(node.default_local_angle)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     Ok(byte_vec)
 }
@@ -618,28 +596,23 @@ fn write_node_angle_and_color_fields(
 
 fn write_node_angle_fields(version: i32, node: &Node) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
-    let mut node_angle_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-    let mut node_angle_writer = Cursor::new(&mut node_angle_bytes[..]);
+    let mut node_angle_writer = BinaryWriter::new(&mut byte_vec);
     node_angle_writer
-        .write_f32::<BigEndian>(node.local_angle)
+        .write_f32(node.local_angle)
         .map_err(StickfigureError::Io)?;
-    byte_vec.append(&mut Vec::from(node_angle_bytes));
 
     if version >= 248 {
-        let mut field_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
-            .write_f32::<BigEndian>(node.default_angle)
+            .write_f32(node.default_angle)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     Ok(byte_vec)
 }
 
 fn write_node_color_fields(version: i32, node: &Node) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
-    let mut node_color_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-    let mut node_color_writer = Cursor::new(&mut node_color_bytes[..]);
+    let mut node_color_writer = BinaryWriter::new(&mut byte_vec);
     node_color_writer
         .write_all(&[
             node.color.alpha,
@@ -648,11 +621,9 @@ fn write_node_color_fields(version: i32, node: &Node) -> Result<Vec<u8>, Stickfi
             node.color.red,
         ])
         .map_err(StickfigureError::Io)?;
-    byte_vec.append(&mut Vec::from(node_color_bytes));
 
     if version >= 176 {
-        let mut field_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
             .write_all(&[
                 node.gradient_color.alpha,
@@ -661,11 +632,9 @@ fn write_node_color_fields(version: i32, node: &Node) -> Result<Vec<u8>, Stickfi
                 node.gradient_color.red,
             ])
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 256 {
-        let mut field_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
             .write_all(&[
                 node.circle_outline_color.alpha,
@@ -674,7 +643,6 @@ fn write_node_color_fields(version: i32, node: &Node) -> Result<Vec<u8>, Stickfi
                 node.circle_outline_color.red,
             ])
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     Ok(byte_vec)
 }
@@ -697,71 +665,56 @@ fn write_node_angle_lock_fields(
     let mut byte_vec = Vec::new();
 
     if version >= 403 && build >= 39 {
-        let mut field_bytes = [0u8; 1]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
             .write_u8(u8::from(node.is_angle_locked))
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 403 && (39..=50).contains(&build) {
-        let field_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        byte_vec.append(&mut Vec::from(field_bytes));
+        byte_vec.extend_from_slice(&[0u8; 4]);
     }
     if version >= 403 && build >= 51 {
         let mut bool = node.angle_lock_is_main_node;
         if build < 56 {
             bool = !bool;
         }
-        let mut field_bytes = [0u8; 1]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
             .write_u8(u8::from(bool))
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 403 && (51..=56).contains(&build) {
-        let mut field_bytes = [0u8; 8]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
-            .write_f32::<BigEndian>(node.angle_lock_offset_minuend)
+            .write_f32(node.angle_lock_offset_minuend)
             .map_err(StickfigureError::Io)?;
         field_writer
-            .write_f32::<BigEndian>(node.angle_lock_offset_subtrahend)
+            .write_f32(node.angle_lock_offset_subtrahend)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 403 && build >= 57 {
-        let mut field_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
-            .write_f32::<BigEndian>(node.angle_lock_offset)
+            .write_f32(node.angle_lock_offset)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 403 && build >= 63 {
-        let mut field_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
-            .write_f32::<BigEndian>(node.angle_lock_relative_start)
+            .write_f32(node.angle_lock_relative_start)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 403 && build >= 67 {
-        let mut field_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
-            .write_f32::<BigEndian>(node.angle_lock_stickfigure_start)
+            .write_f32(node.angle_lock_stickfigure_start)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 403 && build >= 63 {
-        let mut field_bytes = [0u8; 1]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
             .write_i8(node.angle_lock_relative_multiplier)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     Ok(byte_vec)
 }
@@ -774,44 +727,34 @@ fn write_node_drag_fields(
     let mut byte_vec = Vec::new();
     if version >= 403 && build >= 39 {
         if build <= 40 {
-            let mut field_bytes = [0u8; 2]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-            let mut field_writer = Cursor::new(&mut field_bytes[..]);
+            let mut field_writer = BinaryWriter::new(&mut byte_vec);
             field_writer
-                .write_i16::<BigEndian>(i16::from(node.is_drag_locked))
+                .write_i16(i16::from(node.is_drag_locked))
                 .map_err(StickfigureError::Io)?;
-            byte_vec.append(&mut Vec::from(field_bytes));
         } else {
-            let mut field_bytes = [0u8; 1]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-            let mut field_writer = Cursor::new(&mut field_bytes[..]);
+            let mut field_writer = BinaryWriter::new(&mut byte_vec);
             field_writer
                 .write_u8(u8::from(node.is_drag_locked))
                 .map_err(StickfigureError::Io)?;
-            byte_vec.append(&mut Vec::from(field_bytes));
         }
     }
     if version >= 403 && (41..=45).contains(&build) {
-        let field_bytes = [0u8; 2]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        byte_vec.append(&mut Vec::from(field_bytes));
+        byte_vec.extend_from_slice(&[0u8; 2]);
     }
     if version >= 403 && build >= 46 {
-        let mut field_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
-            .write_f32::<BigEndian>(node.drag_lock_angle)
+            .write_f32(node.drag_lock_angle)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 403 && build >= 41 {
-        let mut field_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut field_writer = Cursor::new(&mut field_bytes[..]);
+        let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
-            .write_f32::<BigEndian>(node.smart_stretch_multiplier)
+            .write_f32(node.smart_stretch_multiplier)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(field_bytes));
     }
     if version >= 403 && (41..=45).contains(&build) {
-        let field_bytes = [0u8; 1]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        byte_vec.append(&mut Vec::from(field_bytes));
+        byte_vec.extend_from_slice(&[0u8; 1]);
     }
     Ok(byte_vec)
 }
@@ -819,16 +762,13 @@ fn write_node_drag_fields(
 fn write_polyfill_header(stickfigure: &Stickfigure) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
 
-    let mut output_bytes = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-    let mut byte_writer = Cursor::new(&mut output_bytes[..]);
+    let mut byte_writer = BinaryWriter::new(&mut byte_vec);
     // Allow justified because wrapping and truncation would only matter at absurdly large polyfill counts
     #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
     let number_of_polyfills = stickfigure.polyfills.len() as i32;
     byte_writer
-        .write_i32::<BigEndian>(number_of_polyfills)
+        .write_i32(number_of_polyfills)
         .map_err(StickfigureError::Io)?;
-
-    byte_vec.append(&mut Vec::from(output_bytes));
 
     for polyfill in &stickfigure.polyfills {
         byte_vec.append(&mut write_polyfill(polyfill)?);
@@ -842,10 +782,9 @@ fn write_polyfill(rc_polyfill: &Rc<RefCell<Polyfill>>) -> Result<Vec<u8>, Stickf
 
     let mut byte_vec = Vec::new();
 
-    let mut output_bytes = [0u8; 13]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-    let mut byte_writer = Cursor::new(&mut output_bytes[..]);
+    let mut byte_writer = BinaryWriter::new(&mut byte_vec);
     byte_writer
-        .write_i32::<BigEndian>(polyfill.anchor_node_draw_index.0)
+        .write_i32(polyfill.anchor_node_draw_index.0)
         .map_err(StickfigureError::Io)?;
     byte_writer
         .write_all(&[
@@ -863,18 +802,14 @@ fn write_polyfill(rc_polyfill: &Rc<RefCell<Polyfill>>) -> Result<Vec<u8>, Stickf
     #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
     let number_of_attached_nodes = polyfill.attached_node_draw_indices.len() as i32;
     byte_writer
-        .write_i32::<BigEndian>(number_of_attached_nodes)
+        .write_i32(number_of_attached_nodes)
         .map_err(StickfigureError::Io)?;
 
-    byte_vec.append(&mut Vec::from(output_bytes));
-
     for draw_index in &polyfill.attached_node_draw_indices {
-        let mut local_buffer = [0u8; 4]; // fixed-size output_bytes. should be set to max size of bytes written in this section.
-        let mut local_cursor = Cursor::new(&mut local_buffer[..]);
-        local_cursor
-            .write_i32::<BigEndian>(draw_index.0)
+        let mut local_writer = BinaryWriter::new(&mut byte_vec);
+        local_writer
+            .write_i32(draw_index.0)
             .map_err(StickfigureError::Io)?;
-        byte_vec.append(&mut Vec::from(local_buffer));
     }
 
     Ok(byte_vec)
