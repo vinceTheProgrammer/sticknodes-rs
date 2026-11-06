@@ -13,7 +13,6 @@ use crate::{
     ConnectorMethod,
 };
 
-
 /// Writes big-endian numeric values into an underlying `Write` implementation.
 ///
 /// The stickfigure file format currently writes its numeric fields in big-endian

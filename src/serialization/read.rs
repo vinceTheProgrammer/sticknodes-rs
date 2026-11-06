@@ -12,7 +12,6 @@ use crate::{
     Color, ConnectorData, ConnectorMethod,
 };
 
-
 #[derive(Clone, Copy)]
 enum Endian {
     Big,
@@ -181,17 +180,11 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
         }
 
         if stickfigure.version >= 403 && stickfigure.build >= 38 {
-            let number_of_connectors = reader
-                .read_i32()
-                .map_err(StickfigureError::Io)?;
+            let number_of_connectors = reader.read_i32().map_err(StickfigureError::Io)?;
 
             for _ in 0..number_of_connectors {
-                let my_draw_index = reader
-                    .read_i32()
-                    .map_err(StickfigureError::Io)?;
-                let end_draw_index = reader
-                    .read_i32()
-                    .map_err(StickfigureError::Io)?;
+                let my_draw_index = reader.read_i32().map_err(StickfigureError::Io)?;
+                let end_draw_index = reader.read_i32().map_err(StickfigureError::Io)?;
 
                 let connector_node = stickfigure.get_node(DrawOrderIndex(my_draw_index)).ok_or_else(|| StickfigureError::InvalidDrawIndex(my_draw_index, "Attempted to get connector node defined in .nodes file that does not exist(?)".to_string()))?;
                 if !stickfigure.draw_index_exists(DrawOrderIndex(end_draw_index)) {
@@ -383,8 +376,7 @@ fn read_node_geometry(
         node.curve_circulization = reader.read_u8().map_err(StickfigureError::Io)? != 0;
     }
     if version >= 403 && build >= 21 {
-        node.segment_curve_polyfill_precision =
-            reader.read_i16().map_err(StickfigureError::Io)?;
+        node.segment_curve_polyfill_precision = reader.read_i16().map_err(StickfigureError::Io)?;
     }
     if version >= 256 {
         node.half_arc = reader.read_u8().map_err(StickfigureError::Io)? != 0;
@@ -400,11 +392,9 @@ fn read_node_geometry(
         if build < 64 {
             node.trapezoid_thickness_start =
                 reader.read_i32().map_err(StickfigureError::Io)? as f32;
-            node.trapezoid_thickness_end =
-                reader.read_i32().map_err(StickfigureError::Io)? as f32;
+            node.trapezoid_thickness_end = reader.read_i32().map_err(StickfigureError::Io)? as f32;
         } else {
-            node.trapezoid_thickness_start =
-                reader.read_f32().map_err(StickfigureError::Io)?;
+            node.trapezoid_thickness_start = reader.read_f32().map_err(StickfigureError::Io)?;
             node.trapezoid_thickness_end = reader.read_f32().map_err(StickfigureError::Io)?;
         }
     }
@@ -415,8 +405,7 @@ fn read_node_geometry(
         node.use_trapezoid_thickness_end = reader.read_u8().map_err(StickfigureError::Io)? != 0;
     }
     if version >= 256 && build != 36 {
-        node.trapezoid_top_thickness_ratio =
-            reader.read_f32().map_err(StickfigureError::Io)?;
+        node.trapezoid_top_thickness_ratio = reader.read_f32().map_err(StickfigureError::Io)?;
     }
     if version >= 403 && build >= 36 {
         node.trapezoid_is_rounded_start = reader.read_u8().map_err(StickfigureError::Io)? != 0;
