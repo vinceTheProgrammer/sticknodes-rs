@@ -1,4 +1,3 @@
-
 use std::io;
 use thiserror::Error;
 
@@ -43,9 +42,7 @@ pub enum StickfigureError {
     #[error("Error reading node: {0}")]
     NodeError(String),
 
-    #[error(
-        "Cannot add {0} node(s). Current node count is {1}. Node limit is {2}."
-    )]
+    #[error("Cannot add {0} node(s). Current node count is {1}. Node limit is {2}.")]
     NodeLimitError(usize, usize, usize),
 
     #[error("Draw order index {0} does not exist. {1}")]
@@ -69,9 +66,7 @@ pub enum ColorError {
     )]
     InvalidHexStringValue(String, String),
 
-    #[error(
-        "{0} is not a valid hex string. It has an invalid length: {1}."
-    )]
+    #[error("{0} is not a valid hex string. It has an invalid length: {1}.")]
     InvalidHexStringLength(String, usize),
 
     #[error("{0} is not a valid hex string. It is missing the starting '#' prefix.")]

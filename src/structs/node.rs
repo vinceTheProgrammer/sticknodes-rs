@@ -487,7 +487,6 @@ impl Node {
         self.draw_order_index
     }
 
-
     #[must_use]
     pub fn get_global_angle(&self, stickfigure: &Stickfigure) -> f32 {
         let ancestors = stickfigure.get_parents_recursive(self.get_draw_order_index());

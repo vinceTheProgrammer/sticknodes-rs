@@ -1,4 +1,3 @@
-
 use std::io::{self, Write};
 
 use crate::{
@@ -59,25 +58,21 @@ fn write_stickfigure_header(stickfigure: &Stickfigure) -> Result<Vec<u8>, Stickf
     let mut byte_vec = Vec::new();
 
     let mut byte_writer = BinaryWriter::new(&mut byte_vec);
-    byte_writer
-        .write_i32(stickfigure.version)?;
+    byte_writer.write_i32(stickfigure.version)?;
 
     if stickfigure.version >= 403 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_i32(stickfigure.build)?;
+        field_writer.write_i32(stickfigure.build)?;
     }
 
     let mut segment_color_writer = BinaryWriter::new(&mut byte_vec);
-    segment_color_writer
-        .write_f32(stickfigure.scale)?;
-    segment_color_writer
-        .write_all(&[
-            stickfigure.color.alpha,
-            stickfigure.color.blue,
-            stickfigure.color.green,
-            stickfigure.color.red,
-        ])?;
+    segment_color_writer.write_f32(stickfigure.scale)?;
+    segment_color_writer.write_all(&[
+        stickfigure.color.alpha,
+        stickfigure.color.blue,
+        stickfigure.color.green,
+        stickfigure.color.red,
+    ])?;
 
     Ok(byte_vec)
 }
@@ -108,20 +103,17 @@ pub fn write_stickfigure(stickfigure: &Stickfigure) -> Result<Vec<u8>, LibraryEr
 fn write_connector_data(stickfigure: &Stickfigure) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
 
-    let connector_nodes =
-        stickfigure.get_nodes_with_property(|node| node.connector_data.is_some());
+    let connector_nodes = stickfigure.get_nodes_with_property(|node| node.connector_data.is_some());
 
     let mut byte_writer = BinaryWriter::new(&mut byte_vec);
     // Allow justified because wrapping and truncation would only matter at absurdly large node counts
     #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
-    byte_writer
-        .write_i32(connector_nodes.len() as i32)?;
+    byte_writer.write_i32(connector_nodes.len() as i32)?;
 
     for draw_index in connector_nodes {
         let connector_node = stickfigure.get_node(draw_index).ok_or_else(|| StickfigureError::InvalidDrawIndex(draw_index.0, "Attempted to get connector node that does not exist when writing .nodes. Probably a library bug.".to_string()))?;
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_i32(connector_node.get_draw_order_index().0)?;
+        field_writer.write_i32(connector_node.get_draw_order_index().0)?;
 
         let connector_data = &connector_node.connector_data;
 
@@ -163,16 +155,14 @@ fn write_child_nodes(
         let number_of_child_nodes = children.len() as i32;
 
         let mut byte_writer = BinaryWriter::new(&mut byte_vec);
-        byte_writer
-            .write_i32(number_of_child_nodes)?;
+        byte_writer.write_i32(number_of_child_nodes)?;
 
         if version >= 403 && build > 38 {
             for draw_index in &children {
                 if let Some(node) = stickfigure.get_node(*draw_index) {
                     let connector_data_present = node.connector_data.is_some();
                     let mut byte_writer = BinaryWriter::new(&mut byte_vec);
-                    byte_writer
-                        .write_i32(i32::from(connector_data_present))?;
+                    byte_writer.write_i32(i32::from(connector_data_present))?;
                 } else {
                     return Err(StickfigureError::GenericError(
                         "Failed to get child node from index (while writing .nodes).".to_string(),
@@ -218,7 +208,6 @@ fn prepare_node_for_write(
     node: &mut Node,
     stickfigure: &Stickfigure,
 ) -> Result<(), StickfigureError> {
-
     node.local_x = node.get_local_x(stickfigure);
     node.local_y = node.get_local_y(stickfigure);
 
@@ -243,8 +232,7 @@ fn prepare_node_for_write(
         node.angle_lock_offset_minuend = 0.0;
         node.angle_lock_offset_subtrahend = 0.0;
         node.angle_lock_offset = 0.0;
-    } else if let Some(parent_node_draw_index) =
-        stickfigure.get_parent(node.get_draw_order_index())
+    } else if let Some(parent_node_draw_index) = stickfigure.get_parent(node.get_draw_order_index())
     {
         if let Some(parent_node) = stickfigure.get_node(parent_node_draw_index) {
             if let Some(root_node) = stickfigure.get_node(DrawOrderIndex(0)) {
@@ -264,22 +252,23 @@ fn prepare_node_for_write(
                     AngleLockMode::Relative => {
                         node.is_angle_locked = true;
                         node.angle_lock_is_main_node = false;
-                        node.angle_lock_relative_start =
-                            parent_node.get_global_angle(stickfigure);
+                        node.angle_lock_relative_start = parent_node.get_global_angle(stickfigure);
                         node.angle_lock_stickfigure_start = root_node.local_angle;
                     }
                 }
 
                 node.angle_lock_offset_minuend = node.get_global_angle(stickfigure);
-                node.angle_lock_offset_subtrahend =
-                    parent_node.get_global_angle(stickfigure);
+                node.angle_lock_offset_subtrahend = parent_node.get_global_angle(stickfigure);
                 node.angle_lock_offset =
                     node.angle_lock_offset_minuend - node.angle_lock_offset_subtrahend;
             } else {
                 return Err(StickfigureError::GenericError("Failed to get parent node draw index when setting private properties (while writing .nodes).".to_string()));
             }
         } else {
-            return Err(StickfigureError::GenericError("Failed to get parent node when setting private properties (while writing .nodes).".to_string()));
+            return Err(StickfigureError::GenericError(
+                "Failed to get parent node when setting private properties (while writing .nodes)."
+                    .to_string(),
+            ));
         }
     } else {
         return Err(StickfigureError::GenericError(
@@ -287,7 +276,7 @@ fn prepare_node_for_write(
                 .to_string(),
         ));
     }
-Ok(())
+    Ok(())
 }
 fn write_node_connector_fields(
     version: i32,
@@ -298,33 +287,25 @@ fn write_node_connector_fields(
     if version >= 403 && build >= 38 {
         if let Some(connector_data) = &node.connector_data {
             let mut cursor_c1 = BinaryWriter::new(&mut byte_vec);
-            cursor_c1
-                .write_f32(connector_data.local_x)?;
-            cursor_c1
-                .write_f32(connector_data.local_y)?;
-            cursor_c1
-                .write_f32(connector_data.percent)?;
+            cursor_c1.write_f32(connector_data.local_x)?;
+            cursor_c1.write_f32(connector_data.local_y)?;
+            cursor_c1.write_f32(connector_data.percent)?;
 
             if build >= 44 {
                 let mut cursor_c2 = BinaryWriter::new(&mut byte_vec);
-                cursor_c2
-                    .write_f32(connector_data.percent_default)?;
+                cursor_c2.write_f32(connector_data.percent_default)?;
             }
 
             let mut cursor_c3 = BinaryWriter::new(&mut byte_vec);
-            cursor_c3
-                .write_f32(connector_data.value)?;
-            cursor_c3
-                .write_i32(i32::from(ConnectorMethod::to_integer(
-                    &connector_data.method,
-                )))?;
-            cursor_c3
-                .write_u8(u8::from(connector_data.reversed))?;
+            cursor_c3.write_f32(connector_data.value)?;
+            cursor_c3.write_i32(i32::from(ConnectorMethod::to_integer(
+                &connector_data.method,
+            )))?;
+            cursor_c3.write_u8(u8::from(connector_data.reversed))?;
 
             if build >= 65 {
                 let mut cursor_c4 = BinaryWriter::new(&mut byte_vec);
-                cursor_c4
-                    .write_f32(connector_data.smart_stretch_ancestral_value)?;
+                cursor_c4.write_f32(connector_data.smart_stretch_ancestral_value)?;
             }
         }
     }
@@ -338,63 +319,49 @@ fn write_node_header_fields(
 ) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
     let mut node_header_writer = BinaryWriter::new(&mut byte_vec);
-    node_header_writer
-        .write_i8(node.node_type.to_integer())?;
-    node_header_writer
-        .write_i32(node.draw_order_index.0)?;
-    node_header_writer
-        .write_u8(u8::from(node.is_static))?;
-    node_header_writer
-        .write_u8(u8::from(node.is_stretchy))?;
+    node_header_writer.write_i8(node.node_type.to_integer())?;
+    node_header_writer.write_i32(node.draw_order_index.0)?;
+    node_header_writer.write_u8(u8::from(node.is_static))?;
+    node_header_writer.write_u8(u8::from(node.is_stretchy))?;
 
     if version >= 403 && build >= 48 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_u8(u8::from(node.is_floaty))?;
+        field_writer.write_u8(u8::from(node.is_floaty))?;
     }
 
     if version >= 248 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_u8(u8::from(node.is_smart_stretch))?;
+        field_writer.write_u8(u8::from(node.is_smart_stretch))?;
     }
     if version >= 252 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_u8(u8::from(node.do_not_apply_smart_stretch))?;
+        field_writer.write_u8(u8::from(node.do_not_apply_smart_stretch))?;
     }
 
     if version >= 403 && build >= 50 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_u8(u8::from(node.smart_stretch_reset_impulse))?;
+        field_writer.write_u8(u8::from(node.smart_stretch_reset_impulse))?;
     }
 
     let mut segment_color_writer = BinaryWriter::new(&mut byte_vec);
-    segment_color_writer
-        .write_u8(u8::from(node.use_segment_color))?;
+    segment_color_writer.write_u8(u8::from(node.use_segment_color))?;
 
     if version >= 256 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_u8(u8::from(node.use_circle_outline))?;
+        field_writer.write_u8(u8::from(node.use_circle_outline))?;
     }
     if version >= 403 && build >= 21 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_u8(u8::from(node.circle_is_hollow))?;
+        field_writer.write_u8(u8::from(node.circle_is_hollow))?;
     }
     if version >= 176 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_u8(u8::from(node.use_gradient))?;
-        field_writer
-            .write_u8(u8::from(node.reverse_gradient))?;
+        field_writer.write_u8(u8::from(node.use_gradient))?;
+        field_writer.write_u8(u8::from(node.reverse_gradient))?;
     }
     if version >= 403 && build >= 20 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_i16(i16::from(GradientMode::to_integer(&node.gradient_mode)))?;
+        field_writer.write_i16(i16::from(GradientMode::to_integer(&node.gradient_mode)))?;
     }
     Ok(byte_vec)
 }
@@ -413,22 +380,14 @@ fn write_node_geometry_fields(
 fn write_node_base_geometry(node: &Node) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
     let mut node_geometry_writer = BinaryWriter::new(&mut byte_vec);
-    node_geometry_writer
-        .write_u8(u8::from(node.use_segment_scale))?;
-    node_geometry_writer
-        .write_f32(node.local_x)?;
-    node_geometry_writer
-        .write_f32(node.local_y)?;
-    node_geometry_writer
-        .write_f32(node.scale)?;
-    node_geometry_writer
-        .write_f32(node.default_length)?;
-    node_geometry_writer
-        .write_f32(node.length)?;
-    node_geometry_writer
-        .write_i32(node.default_thickness)?;
-    node_geometry_writer
-        .write_i32(node.thickness)?;
+    node_geometry_writer.write_u8(u8::from(node.use_segment_scale))?;
+    node_geometry_writer.write_f32(node.local_x)?;
+    node_geometry_writer.write_f32(node.local_y)?;
+    node_geometry_writer.write_f32(node.scale)?;
+    node_geometry_writer.write_f32(node.default_length)?;
+    node_geometry_writer.write_f32(node.length)?;
+    node_geometry_writer.write_i32(node.default_thickness)?;
+    node_geometry_writer.write_i32(node.thickness)?;
     Ok(byte_vec)
 }
 
@@ -440,18 +399,15 @@ fn write_node_curve_fields(
     let mut byte_vec = Vec::new();
     if version >= 320 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_i32(node.segment_curve_radius_and_default_curve_radius)?;
+        field_writer.write_i32(node.segment_curve_radius_and_default_curve_radius)?;
     }
     if version >= 403 && build >= 20 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_u8(u8::from(node.curve_circulization))?;
+        field_writer.write_u8(u8::from(node.curve_circulization))?;
     }
     if version >= 403 && build >= 21 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_i16(node.segment_curve_polyfill_precision)?;
+        field_writer.write_i16(node.segment_curve_polyfill_precision)?;
     }
     Ok(byte_vec)
 }
@@ -465,15 +421,12 @@ fn write_node_shape_fields(
 
     if version >= 256 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_u8(u8::from(node.half_arc))?;
-        field_writer
-            .write_i16(node.right_triangle_direction)?;
+        field_writer.write_u8(u8::from(node.half_arc))?;
+        field_writer.write_i16(node.right_triangle_direction)?;
     }
     if version >= 300 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_u8(u8::from(node.triangle_upside_down))?;
+        field_writer.write_u8(u8::from(node.triangle_upside_down))?;
     }
     if version >= 403 && build >= 36 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
@@ -481,15 +434,11 @@ fn write_node_shape_fields(
         // Only figures from a small range of build versions will be effected
         #[allow(clippy::cast_possible_truncation)]
         if build < 64 {
-            field_writer
-                .write_i32(node.trapezoid_thickness_start as i32)?;
-            field_writer
-                .write_i32(node.trapezoid_thickness_end as i32)?;
+            field_writer.write_i32(node.trapezoid_thickness_start as i32)?;
+            field_writer.write_i32(node.trapezoid_thickness_end as i32)?;
         } else {
-            field_writer
-                .write_f32(node.trapezoid_thickness_start)?;
-            field_writer
-                .write_f32(node.trapezoid_thickness_end)?;
+            field_writer.write_f32(node.trapezoid_thickness_start)?;
+            field_writer.write_f32(node.trapezoid_thickness_end)?;
         }
     }
     if version >= 403 && build == 36 {
@@ -497,25 +446,20 @@ fn write_node_shape_fields(
     }
     if version >= 256 && build != 36 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_f32(node.trapezoid_top_thickness_ratio)?;
+        field_writer.write_f32(node.trapezoid_top_thickness_ratio)?;
     }
     if version >= 403 && build >= 36 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_u8(u8::from(node.trapezoid_is_rounded_start))?;
-        field_writer
-            .write_u8(u8::from(node.trapezoid_is_rounded_end))?;
+        field_writer.write_u8(u8::from(node.trapezoid_is_rounded_start))?;
+        field_writer.write_u8(u8::from(node.trapezoid_is_rounded_end))?;
     }
     if version >= 256 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_i16(node.num_polygon_vertices)?;
+        field_writer.write_i16(node.num_polygon_vertices)?;
     }
     if version >= 248 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_f32(node.default_local_angle)?;
+        field_writer.write_f32(node.default_local_angle)?;
     }
     Ok(byte_vec)
 }
@@ -536,13 +480,11 @@ fn write_node_angle_and_color_fields(
 fn write_node_angle_fields(version: i32, node: &Node) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
     let mut node_angle_writer = BinaryWriter::new(&mut byte_vec);
-    node_angle_writer
-        .write_f32(node.local_angle)?;
+    node_angle_writer.write_f32(node.local_angle)?;
 
     if version >= 248 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_f32(node.default_angle)?;
+        field_writer.write_f32(node.default_angle)?;
     }
     Ok(byte_vec)
 }
@@ -550,33 +492,30 @@ fn write_node_angle_fields(version: i32, node: &Node) -> Result<Vec<u8>, Stickfi
 fn write_node_color_fields(version: i32, node: &Node) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
     let mut node_color_writer = BinaryWriter::new(&mut byte_vec);
-    node_color_writer
-        .write_all(&[
-            node.color.alpha,
-            node.color.blue,
-            node.color.green,
-            node.color.red,
-        ])?;
+    node_color_writer.write_all(&[
+        node.color.alpha,
+        node.color.blue,
+        node.color.green,
+        node.color.red,
+    ])?;
 
     if version >= 176 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_all(&[
-                node.gradient_color.alpha,
-                node.gradient_color.blue,
-                node.gradient_color.green,
-                node.gradient_color.red,
-            ])?;
+        field_writer.write_all(&[
+            node.gradient_color.alpha,
+            node.gradient_color.blue,
+            node.gradient_color.green,
+            node.gradient_color.red,
+        ])?;
     }
     if version >= 256 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_all(&[
-                node.circle_outline_color.alpha,
-                node.circle_outline_color.blue,
-                node.circle_outline_color.green,
-                node.circle_outline_color.red,
-            ])?;
+        field_writer.write_all(&[
+            node.circle_outline_color.alpha,
+            node.circle_outline_color.blue,
+            node.circle_outline_color.green,
+            node.circle_outline_color.red,
+        ])?;
     }
     Ok(byte_vec)
 }
@@ -600,8 +539,7 @@ fn write_node_angle_lock_fields(
 
     if version >= 403 && build >= 39 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_u8(u8::from(node.is_angle_locked))?;
+        field_writer.write_u8(u8::from(node.is_angle_locked))?;
     }
     if version >= 403 && (39..=50).contains(&build) {
         byte_vec.extend_from_slice(&[0u8; 4]);
@@ -612,35 +550,28 @@ fn write_node_angle_lock_fields(
             bool = !bool;
         }
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_u8(u8::from(bool))?;
+        field_writer.write_u8(u8::from(bool))?;
     }
     if version >= 403 && (51..=56).contains(&build) {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_f32(node.angle_lock_offset_minuend)?;
-        field_writer
-            .write_f32(node.angle_lock_offset_subtrahend)?;
+        field_writer.write_f32(node.angle_lock_offset_minuend)?;
+        field_writer.write_f32(node.angle_lock_offset_subtrahend)?;
     }
     if version >= 403 && build >= 57 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_f32(node.angle_lock_offset)?;
+        field_writer.write_f32(node.angle_lock_offset)?;
     }
     if version >= 403 && build >= 63 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_f32(node.angle_lock_relative_start)?;
+        field_writer.write_f32(node.angle_lock_relative_start)?;
     }
     if version >= 403 && build >= 67 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_f32(node.angle_lock_stickfigure_start)?;
+        field_writer.write_f32(node.angle_lock_stickfigure_start)?;
     }
     if version >= 403 && build >= 63 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_i8(node.angle_lock_relative_multiplier)?;
+        field_writer.write_i8(node.angle_lock_relative_multiplier)?;
     }
     Ok(byte_vec)
 }
@@ -654,12 +585,10 @@ fn write_node_drag_fields(
     if version >= 403 && build >= 39 {
         if build <= 40 {
             let mut field_writer = BinaryWriter::new(&mut byte_vec);
-            field_writer
-                .write_i16(i16::from(node.is_drag_locked))?;
+            field_writer.write_i16(i16::from(node.is_drag_locked))?;
         } else {
             let mut field_writer = BinaryWriter::new(&mut byte_vec);
-            field_writer
-                .write_u8(u8::from(node.is_drag_locked))?;
+            field_writer.write_u8(u8::from(node.is_drag_locked))?;
         }
     }
     if version >= 403 && (41..=45).contains(&build) {
@@ -667,13 +596,11 @@ fn write_node_drag_fields(
     }
     if version >= 403 && build >= 46 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_f32(node.drag_lock_angle)?;
+        field_writer.write_f32(node.drag_lock_angle)?;
     }
     if version >= 403 && build >= 41 {
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
-        field_writer
-            .write_f32(node.smart_stretch_multiplier)?;
+        field_writer.write_f32(node.smart_stretch_multiplier)?;
     }
     if version >= 403 && (41..=45).contains(&build) {
         byte_vec.extend_from_slice(&[0u8; 1]);
@@ -688,8 +615,7 @@ fn write_polyfill_header(stickfigure: &Stickfigure) -> Result<Vec<u8>, Stickfigu
     // Allow justified because wrapping and truncation would only matter at absurdly large polyfill counts
     #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
     let number_of_polyfills = stickfigure.polyfills.len() as i32;
-    byte_writer
-        .write_i32(number_of_polyfills)?;
+    byte_writer.write_i32(number_of_polyfills)?;
 
     for polyfill in &stickfigure.polyfills {
         byte_vec.append(&mut write_polyfill(polyfill)?);
@@ -699,32 +625,26 @@ fn write_polyfill_header(stickfigure: &Stickfigure) -> Result<Vec<u8>, Stickfigu
 }
 
 fn write_polyfill(polyfill: &Polyfill) -> Result<Vec<u8>, StickfigureError> {
-
     let mut byte_vec = Vec::new();
 
     let mut byte_writer = BinaryWriter::new(&mut byte_vec);
-    byte_writer
-        .write_i32(polyfill.anchor_node_draw_index.0)?;
-    byte_writer
-        .write_all(&[
-            polyfill.color.alpha,
-            polyfill.color.blue,
-            polyfill.color.green,
-            polyfill.color.red,
-        ])?;
-    byte_writer
-        .write_u8(u8::from(polyfill.use_polyfill_color))?;
+    byte_writer.write_i32(polyfill.anchor_node_draw_index.0)?;
+    byte_writer.write_all(&[
+        polyfill.color.alpha,
+        polyfill.color.blue,
+        polyfill.color.green,
+        polyfill.color.red,
+    ])?;
+    byte_writer.write_u8(u8::from(polyfill.use_polyfill_color))?;
 
     // Allow justified because wrapping and truncation would only matter at absurdly large node counts
     #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
     let number_of_attached_nodes = polyfill.attached_node_draw_indices.len() as i32;
-    byte_writer
-        .write_i32(number_of_attached_nodes)?;
+    byte_writer.write_i32(number_of_attached_nodes)?;
 
     for draw_index in &polyfill.attached_node_draw_indices {
         let mut local_writer = BinaryWriter::new(&mut byte_vec);
-        local_writer
-            .write_i32(draw_index.0)?;
+        local_writer.write_i32(draw_index.0)?;
     }
 
     Ok(byte_vec)

@@ -2,11 +2,13 @@ use miniz_oxide::inflate::decompress_to_vec_zlib;
 use std::io::{self, Read, Seek, SeekFrom};
 
 use crate::{
-    Color, ConnectorData, ConnectorMethod, error::{LibraryError, StickfigureError}, structs::{
+    error::{LibraryError, StickfigureError},
+    structs::{
         node::{AngleLockMode, GradientMode, Node, NodeType, TriangleType},
         polyfill::Polyfill,
         stickfigure::{DrawOrderIndex, Stickfigure},
     },
+    Color, ConnectorData, ConnectorMethod,
 };
 
 #[derive(Clone, Copy)]
@@ -80,8 +82,7 @@ impl<R: Seek> Seek for BinaryReader<R> {
 
 fn read_color(reader: &mut impl Read) -> Result<Color, StickfigureError> {
     let mut channels = [0; 4];
-    reader
-        .read_exact(&mut channels)?;
+    reader.read_exact(&mut channels)?;
     let [alpha, blue, green, red] = channels;
     Ok(Color {
         alpha,
@@ -129,11 +130,9 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
     let mut build = stickfigure.build;
 
     if version < 160 {
-        reader
-            .seek(SeekFrom::Start(0))?;
+        reader.seek(SeekFrom::Start(0))?;
         let mut compressed = Vec::new();
-        reader
-            .read_to_end(&mut compressed)?;
+        reader.read_to_end(&mut compressed)?;
 
         let decompressed = decompress_to_vec_zlib(&compressed)?;
 
@@ -299,8 +298,7 @@ fn read_connector_data(
 
     connector_data.reversed = reader.read_u8()? != 0;
     if build >= 65 {
-        connector_data.smart_stretch_ancestral_value =
-            reader.read_f32()?;
+        connector_data.smart_stretch_ancestral_value = reader.read_f32()?;
     }
 
     connector_data.smart_stretch_ancestral_value = 1.0;
@@ -314,8 +312,7 @@ fn read_node_flags(
     version: i32,
     build: i32,
 ) -> Result<(), StickfigureError> {
-    node.node_type =
-        NodeType::from_integer(reader.read_i8()?).unwrap_or_default();
+    node.node_type = NodeType::from_integer(reader.read_i8()?).unwrap_or_default();
     node.draw_order_index.0 = reader.read_i32()?;
     node.is_static = reader.read_u8()? != 0;
     node.is_stretchy = reader.read_u8()? != 0;
@@ -373,8 +370,7 @@ fn read_node_geometry(
     node.thickness = reader.read_i32()?;
 
     if version >= 320 {
-        node.segment_curve_radius_and_default_curve_radius =
-            reader.read_i32()?;
+        node.segment_curve_radius_and_default_curve_radius = reader.read_i32()?;
     }
     if version >= 403 && build >= 20 {
         node.curve_circulization = reader.read_u8()? != 0;
@@ -394,8 +390,7 @@ fn read_node_geometry(
         // Precision loss is inherent in the legacy integer representation.
         #[allow(clippy::cast_precision_loss)]
         if build < 64 {
-            node.trapezoid_thickness_start =
-                reader.read_i32()? as f32;
+            node.trapezoid_thickness_start = reader.read_i32()? as f32;
             node.trapezoid_thickness_end = reader.read_i32()? as f32;
         } else {
             node.trapezoid_thickness_start = reader.read_f32()?;

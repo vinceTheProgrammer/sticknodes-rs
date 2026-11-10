@@ -126,9 +126,9 @@ impl Stickfigure {
 
     #[must_use]
     pub fn to_serializable(&self) -> SerializableStickfigure {
-        let root_node = self.get_node(DrawOrderIndex(0)).expect(
-            "The stickfigure must have a root node with draw-order index 0.",
-        );
+        let root_node = self
+            .get_node(DrawOrderIndex(0))
+            .expect("The stickfigure must have a root node with draw-order index 0.");
         let mut nodes = Vec::new();
         let serializable_nodes = Node::build_serializable_tree(
             &self.nodes,
@@ -261,13 +261,17 @@ impl Stickfigure {
             affected_nodes.sort_by_key(|node_indices| node_indices.draw_index.0);
 
             for indices in &affected_nodes {
-                let node = self.nodes.node_weight_mut(indices.node_index)
+                let node = self
+                    .nodes
+                    .node_weight_mut(indices.node_index)
                     .expect("Node index from draw-index map should be valid");
                 node.draw_order_index.0 += 1;
                 let shifted_draw_index = node.draw_order_index;
 
-                self.draw_index_map.insert(indices.node_index, shifted_draw_index);
-                self.node_index_map.insert(shifted_draw_index, indices.node_index);
+                self.draw_index_map
+                    .insert(indices.node_index, shifted_draw_index);
+                self.node_index_map
+                    .insert(shifted_draw_index, indices.node_index);
             }
         }
 
@@ -505,9 +509,11 @@ impl Stickfigure {
         &mut self,
         anchor_draw_order: DrawOrderIndex,
     ) -> Result<(), StickfigureError> {
-        if !self.polyfills.iter().any(|polyfill| {
-            polyfill.anchor_node_draw_index == anchor_draw_order
-        }) {
+        if !self
+            .polyfills
+            .iter()
+            .any(|polyfill| polyfill.anchor_node_draw_index == anchor_draw_order)
+        {
             return Err(StickfigureError::InvalidDrawIndex(
                 anchor_draw_order.0,
                 "Polyfill anchor not found. Cancelling polyfill removal.".to_string(),
@@ -528,9 +534,8 @@ impl Stickfigure {
             },
         }
 
-        self.polyfills.retain(|polyfill| {
-            polyfill.anchor_node_draw_index != anchor_draw_order
-        });
+        self.polyfills
+            .retain(|polyfill| polyfill.anchor_node_draw_index != anchor_draw_order);
         Ok(())
     }
 
