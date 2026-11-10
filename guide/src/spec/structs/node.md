@@ -1,7 +1,7 @@
 ### Node
 |Data Type|Versions|Builds|Description|
 |---------|--------|------|-----------|
-|8-bit signed byte|Any|Any|Node type. See the [node types table](sticknodes-rs/spec/formats/nodes.md#node-types) for more information. Main node must be -1.
+|8-bit signed byte|Any|Any|Node type. See the [node types table](/sticknodes-rs/spec/formats/nodes.md#node-types) for more information. Main node must be -1.
 |32-bit signed int big-endian|Any|Any|Draw order index. lesser = behind, greater = in front. Acts as ID for node. Every node must have a unique draw order index. Main node must be 0.
 |8-bit unsigned byte|Any|Any|Is static boolean
 |8-bit unsigned byte|Any|Any|Is stretchy boolean
@@ -42,9 +42,9 @@
 |32-bit float big-endian|>=248|Any|Default local angle
 |32-bit float big-endian|Any|Any|Local angle
 |32-bit float big-endian|>=248|Any|Default angle
-|32-bit signed int big-endian|Any|Any|Color. See [Color](sticknodes-rs/spec/structs/color.md) for more information.
-|32-bit signed int big-endian|>=176|Any|Gradient color. See [Color](sticknodes-rs/spec/structs/color.md) for more information.
-|32-bit signed int big-endian|>=256|Any|Circle outline color. See [Color](sticknodes-rs/spec/structs/color.md) for more information.
+|32-bit signed int big-endian|Any|Any|Color. See [Color](/sticknodes-rs/spec/structs/color.md) for more information.
+|32-bit signed int big-endian|>=176|Any|Gradient color. See [Color](/sticknodes-rs/spec/structs/color.md) for more information.
+|32-bit signed int big-endian|>=256|Any|Circle outline color. See [Color](/sticknodes-rs/spec/structs/color.md) for more information.
 |8-bit unsigned byte|>=403|>=39|Is angle locked boolean. If build <= 50, forced to false.
 |32-bit float big-endian|>=403|>=39 && <=50|[unused]
 |8-bit unsigned byte|>=403|>=51|Angle lock is main node boolean. If build < 56, 0 means true.
@@ -61,4 +61,4 @@
 |8-bit unsigned byte|>=403|>=41 && <=45|[unused]
 |32-bit signed int big-endian|Any|Any|<span style="color:coral">A</span> = Number of child nodes
 |sequence with size of <span style="color:coral">A</span> of 32-bit signed int big-endian|>=403|>38|Sequence of ints representing booleans for whether each corresponding node is a connector
-|sequence with size of <span style="color:coral">A</span> of [Node Data](sticknodes-rs/spec/formats/nodes.md#node-data)|Any|Any|See [Node Data](sticknodes-rs/spec/formats/nodes.md#node-data) for more information.
+|sequence with size of <span style="color:coral">A</span> of [Node Data](/sticknodes-rs/spec/formats/nodes.md#node-data)|Any|Any|See [Node Data](/sticknodes-rs/spec/formats/nodes.md#node-data) for more information.

@@ -6,13 +6,13 @@
 |32-bit float big-endian|>=310|Any|Frame sound pitch
 |32-bit float big-endian|>=300|Any|Frame sound library ID
 |32-bit signed int big-endian|>=300|Any|<span style="color:coral">V</span> = 
-|sequence with size of <span style="color:coral">V</span> of [movieclip frame asset data](sticknodes-rs/)|>=300|Any|See [movieclip frame asset data](sticknodes-rs/) for more information.
+|sequence with size of <span style="color:coral">V</span> of [movieclip frame asset data](/sticknodes-rs/)|>=300|Any|See [movieclip frame asset data](/sticknodes-rs/) for more information.
 
 ### Movieclip Frame Asset Data
 |Data Type|Versions|Builds|Description|
 |---------|--------|------|-----------|
 |32-bit signed int big-endian|>=400|Any|<span style="color:coral">W</span> = asset type. (0 = stickfigure, 3 = sprite group, 2 = sprite)
-|<span style="color:cornflowerblue">if <span style="color:coral">W</span> == 0: </span>[movieclip frame stickfigure](sticknodes-rs/)<br><span style="color:cornflowerblue">else if <span style="color:coral">W</span> == 3: </span>[movieclip frame sprite group](sticknodes-rs/)<br><span style="color:cornflowerblue">else if <span style="color:coral">W</span> == 2: </span>[movieclip frame sprite](sticknodes-rs/)|>=300|Any|See [movieclip frame stickfigure](sticknodes-rs/), [movieclip frame sprite group](sticknodes-rs/), or [movieclip frame sprite](sticknodes-rs/) for more information.
+|<span style="color:cornflowerblue">if <span style="color:coral">W</span> == 0: </span>[movieclip frame stickfigure](/sticknodes-rs/)<br><span style="color:cornflowerblue">else if <span style="color:coral">W</span> == 3: </span>[movieclip frame sprite group](/sticknodes-rs/)<br><span style="color:cornflowerblue">else if <span style="color:coral">W</span> == 2: </span>[movieclip frame sprite](/sticknodes-rs/)|>=300|Any|See [movieclip frame stickfigure](/sticknodes-rs/), [movieclip frame sprite group](/sticknodes-rs/), or [movieclip frame sprite](/sticknodes-rs/) for more information.
 
 ### Movieclip Frame Stickfigure
 |Data Type|Versions|Builds|Description|
