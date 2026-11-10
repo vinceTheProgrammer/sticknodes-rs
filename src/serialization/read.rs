@@ -81,8 +81,7 @@ impl<R: Seek> Seek for BinaryReader<R> {
 fn read_color(reader: &mut impl Read) -> Result<Color, StickfigureError> {
     let mut channels = [0; 4];
     reader
-        .read_exact(&mut channels)
-        .map_err(StickfigureError::Io)?;
+        .read_exact(&mut channels)?;
     let [alpha, blue, green, red] = channels;
     Ok(Color {
         alpha,
@@ -110,11 +109,11 @@ fn read_stickfigure_header(
     reader: &mut BinaryReader<impl Read>,
     stickfigure: &mut Stickfigure,
 ) -> Result<(), StickfigureError> {
-    stickfigure.version = reader.read_i32().map_err(StickfigureError::Io)?;
+    stickfigure.version = reader.read_i32()?;
     if stickfigure.version >= 403 {
-        stickfigure.build = reader.read_i32().map_err(StickfigureError::Io)?;
+        stickfigure.build = reader.read_i32()?;
     }
-    stickfigure.scale = reader.read_f32().map_err(StickfigureError::Io)?;
+    stickfigure.scale = reader.read_f32()?;
     stickfigure.color = read_color(reader)?;
 
     Ok(())
@@ -131,15 +130,12 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
 
     if version < 160 {
         reader
-            .seek(SeekFrom::Start(0))
-            .map_err(StickfigureError::Io)?;
+            .seek(SeekFrom::Start(0))?;
         let mut compressed = Vec::new();
         reader
-            .read_to_end(&mut compressed)
-            .map_err(StickfigureError::Io)?;
+            .read_to_end(&mut compressed)?;
 
-        let decompressed = decompress_to_vec_zlib(&compressed)
-            .map_err(|err| StickfigureError::DecompressError(format!("{err}")))?;
+        let decompressed = decompress_to_vec_zlib(&compressed)?;
 
         let mut decompressed_reader = BinaryReader::new(decompressed.as_slice(), Endian::Little);
 
@@ -177,11 +173,11 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
         }
 
         if stickfigure.version >= 403 && stickfigure.build >= 38 {
-            let number_of_connectors = reader.read_i32().map_err(StickfigureError::Io)?;
+            let number_of_connectors = reader.read_i32()?;
 
             for _ in 0..number_of_connectors {
-                let my_draw_index = reader.read_i32().map_err(StickfigureError::Io)?;
-                let end_draw_index = reader.read_i32().map_err(StickfigureError::Io)?;
+                let my_draw_index = reader.read_i32()?;
+                let end_draw_index = reader.read_i32()?;
 
                 if !stickfigure.draw_index_exists(DrawOrderIndex(end_draw_index)) {
                     return Err(LibraryError::StickfigureError(StickfigureError::InvalidDrawIndex(
@@ -281,30 +277,30 @@ fn read_connector_data(
     build: i32,
 ) -> Result<ConnectorData, StickfigureError> {
     let mut connector_data = ConnectorData {
-        local_x: reader.read_f32().map_err(StickfigureError::Io)?,
-        local_y: reader.read_f32().map_err(StickfigureError::Io)?,
-        percent: reader.read_f32().map_err(StickfigureError::Io)?,
+        local_x: reader.read_f32()?,
+        local_y: reader.read_f32()?,
+        percent: reader.read_f32()?,
         ..Default::default()
     };
 
     if build >= 44 {
-        connector_data.percent_default = reader.read_f32().map_err(StickfigureError::Io)?;
+        connector_data.percent_default = reader.read_f32()?;
     }
 
     connector_data.percent_default = connector_data.percent;
-    connector_data.value = reader.read_f32().map_err(StickfigureError::Io)?;
+    connector_data.value = reader.read_f32()?;
 
-    let method = reader.read_i32().map_err(StickfigureError::Io)?;
+    let method = reader.read_i32()?;
     // Allow justified because truncation would not throw out any useful information. There are only two connector methods as of writing this.
     #[allow(clippy::cast_possible_truncation)]
     {
         connector_data.method = ConnectorMethod::from_integer(method as i8).unwrap_or_default();
     }
 
-    connector_data.reversed = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+    connector_data.reversed = reader.read_u8()? != 0;
     if build >= 65 {
         connector_data.smart_stretch_ancestral_value =
-            reader.read_f32().map_err(StickfigureError::Io)?;
+            reader.read_f32()?;
     }
 
     connector_data.smart_stretch_ancestral_value = 1.0;
@@ -319,37 +315,37 @@ fn read_node_flags(
     build: i32,
 ) -> Result<(), StickfigureError> {
     node.node_type =
-        NodeType::from_integer(reader.read_i8().map_err(StickfigureError::Io)?).unwrap_or_default();
-    node.draw_order_index.0 = reader.read_i32().map_err(StickfigureError::Io)?;
-    node.is_static = reader.read_u8().map_err(StickfigureError::Io)? != 0;
-    node.is_stretchy = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+        NodeType::from_integer(reader.read_i8()?).unwrap_or_default();
+    node.draw_order_index.0 = reader.read_i32()?;
+    node.is_static = reader.read_u8()? != 0;
+    node.is_stretchy = reader.read_u8()? != 0;
 
     if version >= 403 && build >= 48 {
-        node.is_floaty = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+        node.is_floaty = reader.read_u8()? != 0;
     }
     if version >= 248 {
-        node.is_smart_stretch = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+        node.is_smart_stretch = reader.read_u8()? != 0;
     }
     if version >= 252 {
-        node.do_not_apply_smart_stretch = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+        node.do_not_apply_smart_stretch = reader.read_u8()? != 0;
     }
     if version >= 403 && build >= 50 {
-        node.smart_stretch_reset_impulse = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+        node.smart_stretch_reset_impulse = reader.read_u8()? != 0;
     }
-    node.use_segment_color = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+    node.use_segment_color = reader.read_u8()? != 0;
 
     if version >= 256 {
-        node.use_circle_outline = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+        node.use_circle_outline = reader.read_u8()? != 0;
     }
     if version >= 403 && build >= 21 {
-        node.circle_is_hollow = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+        node.circle_is_hollow = reader.read_u8()? != 0;
     }
     if version >= 176 {
-        node.use_gradient = reader.read_u8().map_err(StickfigureError::Io)? != 0;
-        node.reverse_gradient = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+        node.use_gradient = reader.read_u8()? != 0;
+        node.reverse_gradient = reader.read_u8()? != 0;
     }
     if version >= 403 && build >= 20 {
-        let gradient_mode = reader.read_i16().map_err(StickfigureError::Io)?;
+        let gradient_mode = reader.read_i16()?;
         // Allow justified because truncation would not throw out any useful information. There are only two gradient modes as of writing this.
         #[allow(clippy::cast_possible_truncation)]
         {
@@ -367,31 +363,31 @@ fn read_node_geometry(
     version: i32,
     build: i32,
 ) -> Result<(), StickfigureError> {
-    node.use_segment_scale = reader.read_u8().map_err(StickfigureError::Io)? != 0;
-    node.local_x = reader.read_f32().map_err(StickfigureError::Io)?;
-    node.local_y = reader.read_f32().map_err(StickfigureError::Io)?;
-    node.scale = reader.read_f32().map_err(StickfigureError::Io)?;
-    node.default_length = reader.read_f32().map_err(StickfigureError::Io)?;
-    node.length = reader.read_f32().map_err(StickfigureError::Io)?;
-    node.default_thickness = reader.read_i32().map_err(StickfigureError::Io)?;
-    node.thickness = reader.read_i32().map_err(StickfigureError::Io)?;
+    node.use_segment_scale = reader.read_u8()? != 0;
+    node.local_x = reader.read_f32()?;
+    node.local_y = reader.read_f32()?;
+    node.scale = reader.read_f32()?;
+    node.default_length = reader.read_f32()?;
+    node.length = reader.read_f32()?;
+    node.default_thickness = reader.read_i32()?;
+    node.thickness = reader.read_i32()?;
 
     if version >= 320 {
         node.segment_curve_radius_and_default_curve_radius =
-            reader.read_i32().map_err(StickfigureError::Io)?;
+            reader.read_i32()?;
     }
     if version >= 403 && build >= 20 {
-        node.curve_circulization = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+        node.curve_circulization = reader.read_u8()? != 0;
     }
     if version >= 403 && build >= 21 {
-        node.segment_curve_polyfill_precision = reader.read_i16().map_err(StickfigureError::Io)?;
+        node.segment_curve_polyfill_precision = reader.read_i16()?;
     }
     if version >= 256 {
-        node.half_arc = reader.read_u8().map_err(StickfigureError::Io)? != 0;
-        node.right_triangle_direction = reader.read_i16().map_err(StickfigureError::Io)?;
+        node.half_arc = reader.read_u8()? != 0;
+        node.right_triangle_direction = reader.read_i16()?;
     }
     if version >= 300 {
-        node.triangle_upside_down = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+        node.triangle_upside_down = reader.read_u8()? != 0;
     }
     if version >= 403 && build >= 36 {
         // Older builds serialize these values as integers; newer builds use floats.
@@ -399,35 +395,35 @@ fn read_node_geometry(
         #[allow(clippy::cast_precision_loss)]
         if build < 64 {
             node.trapezoid_thickness_start =
-                reader.read_i32().map_err(StickfigureError::Io)? as f32;
-            node.trapezoid_thickness_end = reader.read_i32().map_err(StickfigureError::Io)? as f32;
+                reader.read_i32()? as f32;
+            node.trapezoid_thickness_end = reader.read_i32()? as f32;
         } else {
-            node.trapezoid_thickness_start = reader.read_f32().map_err(StickfigureError::Io)?;
-            node.trapezoid_thickness_end = reader.read_f32().map_err(StickfigureError::Io)?;
+            node.trapezoid_thickness_start = reader.read_f32()?;
+            node.trapezoid_thickness_end = reader.read_f32()?;
         }
     }
     if version >= 403 && build == 36 {
-        reader.read_i32().map_err(StickfigureError::Io)?;
-        reader.read_i32().map_err(StickfigureError::Io)?;
-        node.use_trapezoid_thickness_start = reader.read_u8().map_err(StickfigureError::Io)? != 0;
-        node.use_trapezoid_thickness_end = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+        reader.read_i32()?;
+        reader.read_i32()?;
+        node.use_trapezoid_thickness_start = reader.read_u8()? != 0;
+        node.use_trapezoid_thickness_end = reader.read_u8()? != 0;
     }
     if version >= 256 && build != 36 {
-        node.trapezoid_top_thickness_ratio = reader.read_f32().map_err(StickfigureError::Io)?;
+        node.trapezoid_top_thickness_ratio = reader.read_f32()?;
     }
     if version >= 403 && build >= 36 {
-        node.trapezoid_is_rounded_start = reader.read_u8().map_err(StickfigureError::Io)? != 0;
-        node.trapezoid_is_rounded_end = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+        node.trapezoid_is_rounded_start = reader.read_u8()? != 0;
+        node.trapezoid_is_rounded_end = reader.read_u8()? != 0;
     }
     if version >= 256 {
-        node.num_polygon_vertices = reader.read_i16().map_err(StickfigureError::Io)?;
+        node.num_polygon_vertices = reader.read_i16()?;
     }
     if version >= 248 {
-        node.default_local_angle = reader.read_f32().map_err(StickfigureError::Io)?;
+        node.default_local_angle = reader.read_f32()?;
     }
-    node.local_angle = reader.read_f32().map_err(StickfigureError::Io)?;
+    node.local_angle = reader.read_f32()?;
     if version >= 248 {
-        node.default_angle = reader.read_f32().map_err(StickfigureError::Io)?;
+        node.default_angle = reader.read_f32()?;
     }
 
     Ok(())
@@ -455,54 +451,54 @@ fn read_node_angle_lock(
     build: i32,
 ) -> Result<(), StickfigureError> {
     if version >= 403 && build >= 39 {
-        node.is_angle_locked = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+        node.is_angle_locked = reader.read_u8()? != 0;
         if build <= 50 {
             node.is_angle_locked = false;
         }
     }
     if version >= 403 && (39..=50).contains(&build) {
-        reader.read_f32().map_err(StickfigureError::Io)?;
+        reader.read_f32()?;
     }
     if version >= 403 && build >= 51 {
-        node.angle_lock_is_main_node = reader.read_u8().map_err(StickfigureError::Io)? != 0;
+        node.angle_lock_is_main_node = reader.read_u8()? != 0;
         if build < 56 {
             node.angle_lock_is_main_node = !node.angle_lock_is_main_node;
         }
     }
     if version >= 403 && (51..=56).contains(&build) {
-        node.angle_lock_offset_minuend = reader.read_f32().map_err(StickfigureError::Io)?;
-        node.angle_lock_offset_subtrahend = reader.read_f32().map_err(StickfigureError::Io)?;
+        node.angle_lock_offset_minuend = reader.read_f32()?;
+        node.angle_lock_offset_subtrahend = reader.read_f32()?;
     }
     if version >= 403 && build >= 57 {
-        node.angle_lock_offset = reader.read_f32().map_err(StickfigureError::Io)?;
+        node.angle_lock_offset = reader.read_f32()?;
     }
     if version >= 403 && build >= 63 {
-        node.angle_lock_relative_start = reader.read_f32().map_err(StickfigureError::Io)?;
+        node.angle_lock_relative_start = reader.read_f32()?;
     }
     if version >= 403 && build >= 67 {
-        node.angle_lock_stickfigure_start = reader.read_f32().map_err(StickfigureError::Io)?;
+        node.angle_lock_stickfigure_start = reader.read_f32()?;
     }
     if version >= 403 && build >= 63 {
-        node.angle_lock_relative_multiplier = reader.read_i8().map_err(StickfigureError::Io)?;
+        node.angle_lock_relative_multiplier = reader.read_i8()?;
     }
     if version >= 403 && build >= 39 {
         node.is_drag_locked = if build <= 40 {
-            reader.read_i16().map_err(StickfigureError::Io)? != 0
+            reader.read_i16()? != 0
         } else {
-            reader.read_u8().map_err(StickfigureError::Io)? != 0
+            reader.read_u8()? != 0
         };
     }
     if version >= 403 && (41..=45).contains(&build) {
-        reader.read_i16().map_err(StickfigureError::Io)?;
+        reader.read_i16()?;
     }
     if version >= 403 && build >= 46 {
-        node.drag_lock_angle = reader.read_f32().map_err(StickfigureError::Io)?;
+        node.drag_lock_angle = reader.read_f32()?;
     }
     if version >= 403 && build >= 41 {
-        node.smart_stretch_multiplier = reader.read_f32().map_err(StickfigureError::Io)?;
+        node.smart_stretch_multiplier = reader.read_f32()?;
     }
     if version >= 403 && (41..=45).contains(&build) {
-        reader.read_u8().map_err(StickfigureError::Io)?;
+        reader.read_u8()?;
     }
 
     Ok(())
@@ -513,12 +509,12 @@ fn read_node_children_metadata(
     version: i32,
     build: i32,
 ) -> Result<(i32, Vec<bool>), StickfigureError> {
-    let number_of_child_nodes = reader.read_i32().map_err(StickfigureError::Io)?;
+    let number_of_child_nodes = reader.read_i32()?;
     let mut connector_booleans = Vec::new();
 
     if version >= 403 && build > 38 {
         for _ in 0..number_of_child_nodes {
-            connector_booleans.push(reader.read_i32().map_err(StickfigureError::Io)? != 0);
+            connector_booleans.push(reader.read_i32()? != 0);
         }
     }
 
@@ -557,7 +553,7 @@ fn initialize_node_derived_fields(node: &mut Node) {
 fn read_polyfill_header(
     reader: &mut BinaryReader<impl Read>,
 ) -> Result<Vec<Polyfill>, StickfigureError> {
-    let number_of_polyfills = reader.read_i32().map_err(StickfigureError::Io)?;
+    let number_of_polyfills = reader.read_i32()?;
 
     // Allow justified because wrapping and truncation would only matter at absurdly large polyfill counts
     // Allow cast sign loss justified because number of polyfills should never be negative
@@ -578,16 +574,15 @@ fn read_polyfill_header(
 fn read_polyfill(reader: &mut BinaryReader<impl Read>) -> Result<Polyfill, StickfigureError> {
     let mut polyfill = Polyfill::default();
 
-    polyfill.anchor_node_draw_index.0 = reader.read_i32().map_err(StickfigureError::Io)?;
+    polyfill.anchor_node_draw_index.0 = reader.read_i32()?;
 
     polyfill.color = read_color(reader)?;
-    polyfill.use_polyfill_color = reader.read_u8().map_err(StickfigureError::Io)? != 0;
-    let number_of_attached_nodes = reader.read_i32().map_err(StickfigureError::Io)?;
+    polyfill.use_polyfill_color = reader.read_u8()? != 0;
+    let number_of_attached_nodes = reader.read_i32()?;
 
     let attached_node_draw_indices: Vec<DrawOrderIndex> = (0..number_of_attached_nodes)
         .map(|_| reader.read_i32().map(DrawOrderIndex))
-        .collect::<Result<_, _>>()
-        .map_err(StickfigureError::Io)?;
+        .collect::<Result<_, _>>()?;
 
     polyfill.attached_node_draw_indices = attached_node_draw_indices;
 

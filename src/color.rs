@@ -42,13 +42,13 @@ impl Color {
     /// (case-insensitive). Any other format will fail.
     pub fn from_hex(hex: &str) -> Result<Self, ColorError> {
         if hex.is_empty() {
-            return Err(ColorError::EmptyHexString());
+            return Err(ColorError::EmptyHexString);
         }
 
         let trimmed_hex = hex.trim_start_matches('#');
 
         match trimmed_hex.len() {
-            0 => Err(ColorError::EmptyTrimmedHexString()),
+            0 => Err(ColorError::EmptyTrimmedHexString),
             3 => Self::parse_short_hex(trimmed_hex, false),
             4 => Self::parse_short_hex(trimmed_hex, true),
             6 => Self::parse_long_hex(trimmed_hex, false),

@@ -1,44 +1,51 @@
+
 use std::io;
-use std::string::String;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum LibraryError {
-    #[error("Error: {0}")]
+    #[error("{0}")]
     AnyString(String),
 
-    #[error("Stick Nodes version {0} is not supported. Please check if an update to this library is available.")]
+    #[error(
+        "Stick Nodes version {0} is not supported. Please check if an update to this library is available."
+    )]
     UnsupportedVersion(i32),
 
-    #[error("Although Stick Nodes version {0} is supported, Stick Nodes build {1} is not supported. Please check if an update to this library is available.")]
+    #[error(
+        "Although Stick Nodes version {0} is supported, Stick Nodes build {1} is not supported. Please check if an update to this library is available."
+    )]
     UnsupportedBuild(i32, i32),
+
+    #[error("I/O error: {0}")]
+    Io(#[from] io::Error),
+
+    #[error("Decompression error: {0:?}")]
+    Decompress(miniz_oxide::inflate::DecompressError),
 
     #[error("Stickfigure file error: {0}")]
     StickfigureError(#[from] StickfigureError),
 }
 
-// TODO, add non-exaustive annotation breaking change to prevent future breaking changes when adding new errors.
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum StickfigureError {
     #[error("I/O error: {0}")]
-    Io(io::Error),
-
-    #[error("Decompress error: {0}")]
-    DecompressError(String),
+    Io(#[from] io::Error),
 
     #[error("{0}")]
     GenericError(String),
 
-    // TODO, add later. Will be a breaking change.
-    // #[error("Error when decompressing zlib data")]
-    // Decompression(),
     #[error("Invalid stickfigure header: {0}")]
     InvalidHeader(String),
 
     #[error("Error reading node: {0}")]
     NodeError(String),
 
-    #[error("Cannot add {0} node(s). Current node count is {1}. Node limit is {2}.")]
+    #[error(
+        "Cannot add {0} node(s). Current node count is {1}. Node limit is {2}."
+    )]
     NodeLimitError(usize, usize, usize),
 
     #[error("Draw order index {0} does not exist. {1}")]
@@ -55,22 +62,33 @@ pub enum StickfigureError {
 }
 
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum ColorError {
-    #[error("{0} is not a valid hex string. The value of the following part of the hex string could not be parsed: {1}")]
+    #[error(
+        "{0} is not a valid hex string. The value of the following part of the hex string could not be parsed: {1}"
+    )]
     InvalidHexStringValue(String, String),
 
-    #[error("{0} is not a valid hex string. It is either missing a starting \"#\", is not a valid length")]
+    #[error(
+        "{0} is not a valid hex string. It has an invalid length: {1}."
+    )]
     InvalidHexStringLength(String, usize),
 
-    #[error("{0} is not a valid hex string. It is either missing a starting \"#\", is not a valid length")]
+    #[error("{0} is not a valid hex string. It is missing the starting '#' prefix.")]
     InvalidHexStringPrefix(String),
 
     #[error("{0} is not a valid hex string.")]
     InvalidHexString(String),
 
     #[error("Hex string is empty.")]
-    EmptyHexString(),
+    EmptyHexString,
 
-    #[error("Trimmed hex string is empty. Was your hex string just \"#\"s?")]
-    EmptyTrimmedHexString(),
+    #[error("Trimmed hex string is empty. Was your hex string just '#'s?")]
+    EmptyTrimmedHexString,
+}
+
+impl From<miniz_oxide::inflate::DecompressError> for LibraryError {
+    fn from(error: miniz_oxide::inflate::DecompressError) -> Self {
+        Self::Decompress(error)
+    }
 }
