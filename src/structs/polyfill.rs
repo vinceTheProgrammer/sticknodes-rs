@@ -247,12 +247,12 @@ impl Polyfill {
     pub fn get_global_vertices(&self, stickfigure: &Stickfigure) -> Vec<Vec2> {
         let anchor_node = stickfigure.get_node(self.anchor_node_draw_index).expect("this is an internal library error because the anchor node draw index should always be valid");
 
-        let anchor_position = anchor_node.borrow().get_global_end(stickfigure);
+        let anchor_position = anchor_node.get_global_end(stickfigure);
 
         let nodes = self.attached_node_draw_indices.iter().map(|id| stickfigure.get_node(*id).expect("this is an internal library error because all attached node draw indices should always be valid"));
 
         let mut node_positions = nodes
-            .map(|node| node.borrow().get_global_end(stickfigure))
+            .map(|node| node.get_global_end(stickfigure))
             .collect::<Vec<Vec2>>();
 
         node_positions.insert(0, anchor_position);

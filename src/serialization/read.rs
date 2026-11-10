@@ -1,15 +1,12 @@
 use miniz_oxide::inflate::decompress_to_vec_zlib;
 use std::io::{self, Read, Seek, SeekFrom};
-use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    error::{LibraryError, StickfigureError},
-    structs::{
+    Color, ConnectorData, ConnectorMethod, error::{LibraryError, StickfigureError}, structs::{
         node::{AngleLockMode, GradientMode, Node, NodeType, TriangleType},
         polyfill::Polyfill,
         stickfigure::{DrawOrderIndex, Stickfigure},
     },
-    Color, ConnectorData, ConnectorMethod,
 };
 
 #[derive(Clone, Copy)]
@@ -186,12 +183,23 @@ pub fn read_stickfigure<R: Read + Seek>(reader: &mut R) -> Result<Stickfigure, L
                 let my_draw_index = reader.read_i32().map_err(StickfigureError::Io)?;
                 let end_draw_index = reader.read_i32().map_err(StickfigureError::Io)?;
 
-                let connector_node = stickfigure.get_node(DrawOrderIndex(my_draw_index)).ok_or_else(|| StickfigureError::InvalidDrawIndex(my_draw_index, "Attempted to get connector node defined in .nodes file that does not exist(?)".to_string()))?;
                 if !stickfigure.draw_index_exists(DrawOrderIndex(end_draw_index)) {
-                    Err(StickfigureError::InvalidDrawIndex(end_draw_index, "Attempted to get end connector node defined in .nodes file that does not exist(?)".to_string()))?;
+                    return Err(LibraryError::StickfigureError(StickfigureError::InvalidDrawIndex(
+                        end_draw_index,
+                        "Attempted to get end connector node defined in .nodes file that does not exist(?)".to_string(),
+                    )));
                 }
 
-                let connector_data = &mut connector_node.borrow_mut().connector_data;
+                let connector_node = stickfigure
+                    .get_node_mut(DrawOrderIndex(my_draw_index))
+                    .ok_or_else(|| {
+                        StickfigureError::InvalidDrawIndex(
+                            my_draw_index,
+                            "Attempted to get connector node defined in .nodes file that does not exist(?)".to_string(),
+                        )
+                    })?;
+
+                let connector_data = &mut connector_node.connector_data;
 
                 let Some(data) = connector_data else {
                     return Err(StickfigureError::GenericError(format!(
@@ -548,7 +556,7 @@ fn initialize_node_derived_fields(node: &mut Node) {
 
 fn read_polyfill_header(
     reader: &mut BinaryReader<impl Read>,
-) -> Result<Vec<Rc<RefCell<Polyfill>>>, StickfigureError> {
+) -> Result<Vec<Polyfill>, StickfigureError> {
     let number_of_polyfills = reader.read_i32().map_err(StickfigureError::Io)?;
 
     // Allow justified because wrapping and truncation would only matter at absurdly large polyfill counts
@@ -560,7 +568,7 @@ fn read_polyfill_header(
     )]
     let mut polyfills = Vec::with_capacity(number_of_polyfills as usize);
     for _ in 0..number_of_polyfills {
-        let polyfill = Rc::new(RefCell::new(read_polyfill(reader)?));
+        let polyfill = read_polyfill(reader)?;
         polyfills.push(polyfill);
     }
 

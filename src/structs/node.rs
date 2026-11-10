@@ -11,8 +11,7 @@ use crate::Stickfigure;
 use super::connector::ConnectorData;
 use super::stickfigure::DrawOrderIndex;
 
-use core::cell::RefCell;
-use std::{rc::Rc, vec::Vec};
+use std::vec::Vec;
 
 #[allow(clippy::struct_excessive_bools)]
 // Perhaps look into restructuring these structs later to be more idiomatic, but for now the cope is that they more closely match the .nodes file format
@@ -421,10 +420,10 @@ impl Node {
 
     #[must_use]
     pub fn build_serializable_tree(
-        graph: &Graph<Rc<RefCell<Node>>, ()>,
+        graph: &Graph<Node, ()>,
         current: NodeIndex,
     ) -> SerializableNode {
-        let node = graph.node_weight(current).expect("Bug with library. NodeIndex passed to build_serializable_tree in Node is not valid.").borrow().clone();
+        let node = graph.node_weight(current).expect("Bug with library. NodeIndex passed to build_serializable_tree in Node is not valid.").clone();
         let mut children = Vec::new();
 
         for neighbor in graph.neighbors_directed(current, petgraph::Direction::Outgoing) {
@@ -488,13 +487,6 @@ impl Node {
         self.draw_order_index
     }
 
-    pub fn update<F>(rc_node: &Rc<RefCell<Self>>, f: F)
-    where
-        F: FnOnce(&mut Self),
-    {
-        let mut inner = rc_node.borrow_mut();
-        f(&mut inner);
-    }
 
     #[must_use]
     pub fn get_global_angle(&self, stickfigure: &Stickfigure) -> f32 {
@@ -503,7 +495,7 @@ impl Node {
 
         for ancestor in &ancestors {
             if let Some(node) = stickfigure.get_node(*ancestor) {
-                let angle = node.borrow().local_angle;
+                let angle = node.local_angle;
 
                 global_angle += angle;
             }
@@ -548,11 +540,11 @@ impl Node {
         for ancestor in &ancestors {
             if let Some(node) = stickfigure.get_node(*ancestor) {
                 let mut scale_factor = 1.0;
-                if node.borrow().use_segment_scale {
+                if node.use_segment_scale {
                     scale_factor = self.scale;
                 }
 
-                global_position += node.borrow().get_local_position(stickfigure) * scale_factor;
+                global_position += node.get_local_position(stickfigure) * scale_factor;
             }
         }
 

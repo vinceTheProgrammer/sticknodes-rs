@@ -1,7 +1,5 @@
-use std::cell::RefCell;
 
 use std::io::{self, Write};
-use std::rc::Rc;
 
 use crate::{
     error::{LibraryError, StickfigureError},
@@ -115,7 +113,7 @@ fn write_connector_data(stickfigure: &Stickfigure) -> Result<Vec<u8>, Stickfigur
     let mut byte_vec = Vec::new();
 
     let connector_nodes =
-        stickfigure.get_nodes_with_property(|node| node.borrow().connector_data.is_some());
+        stickfigure.get_nodes_with_property(|node| node.connector_data.is_some());
 
     let mut byte_writer = BinaryWriter::new(&mut byte_vec);
     // Allow justified because wrapping and truncation would only matter at absurdly large node counts
@@ -128,10 +126,10 @@ fn write_connector_data(stickfigure: &Stickfigure) -> Result<Vec<u8>, Stickfigur
         let connector_node = stickfigure.get_node(draw_index).ok_or_else(|| StickfigureError::InvalidDrawIndex(draw_index.0, "Attempted to get connector node that does not exist when writing .nodes. Probably a library bug.".to_string()))?;
         let mut field_writer = BinaryWriter::new(&mut byte_vec);
         field_writer
-            .write_i32(connector_node.borrow().get_draw_order_index().0)
+            .write_i32(connector_node.get_draw_order_index().0)
             .map_err(StickfigureError::Io)?;
 
-        let connector_data = &mut connector_node.borrow_mut().connector_data;
+        let connector_data = &connector_node.connector_data;
 
         match connector_data {
             Some(data) => {
@@ -178,7 +176,7 @@ fn write_child_nodes(
         if version >= 403 && build > 38 {
             for draw_index in &children {
                 if let Some(node) = stickfigure.get_node(*draw_index) {
-                    let connector_data_present = node.borrow().connector_data.is_some();
+                    let connector_data_present = node.connector_data.is_some();
                     let mut byte_writer = BinaryWriter::new(&mut byte_vec);
                     byte_writer
                         .write_i32(i32::from(connector_data_present))
@@ -207,15 +205,14 @@ fn write_child_nodes(
 fn write_node(
     version: i32,
     build: i32,
-    rc_node: &Rc<RefCell<Node>>,
+    node: &Node,
     stickfigure: &Stickfigure,
 ) -> Result<Vec<u8>, StickfigureError> {
-    prepare_node_for_write(rc_node, stickfigure)?;
-
-    let node = rc_node.borrow();
+    let mut node = node.clone();
+    prepare_node_for_write(&mut node, stickfigure)?;
     let mut byte_vec = Vec::new();
 
-    byte_vec.append(&mut write_node_connector_fields(version, build, rc_node)?);
+    byte_vec.append(&mut write_node_connector_fields(version, build, &node)?);
     byte_vec.append(&mut write_node_header_fields(version, build, &node)?);
     byte_vec.append(&mut write_node_geometry_fields(version, build, &node)?);
     byte_vec.append(&mut write_node_angle_and_color_fields(
@@ -226,92 +223,88 @@ fn write_node(
 }
 
 fn prepare_node_for_write(
-    rc_node: &Rc<RefCell<Node>>,
+    node: &mut Node,
     stickfigure: &Stickfigure,
 ) -> Result<(), StickfigureError> {
-    {
-        let mut node = rc_node.borrow_mut();
 
-        node.local_x = node.get_local_x(stickfigure);
-        node.local_y = node.get_local_y(stickfigure);
+    node.local_x = node.get_local_x(stickfigure);
+    node.local_y = node.get_local_y(stickfigure);
 
-        match node.triangle_type {
-            TriangleType::Isosceles => {
-                node.right_triangle_direction = 0;
-            }
-            TriangleType::RightTriangle => {
-                if node.triangle_flipped {
-                    node.right_triangle_direction = -1;
-                } else {
-                    node.right_triangle_direction = 1;
-                }
-            }
+    match node.triangle_type {
+        TriangleType::Isosceles => {
+            node.right_triangle_direction = 0;
         }
-
-        if node.node_type.to_integer() == NodeType::RootNode.to_integer() {
-            node.is_angle_locked = false;
-            node.angle_lock_is_main_node = false;
-            node.angle_lock_relative_start = 0.0;
-            node.angle_lock_stickfigure_start = 0.0;
-            node.angle_lock_offset_minuend = 0.0;
-            node.angle_lock_offset_subtrahend = 0.0;
-            node.angle_lock_offset = 0.0;
-        } else if let Some(parent_node_draw_index) =
-            stickfigure.get_parent(node.get_draw_order_index())
-        {
-            if let Some(parent_node) = stickfigure.get_node(parent_node_draw_index) {
-                if let Some(root_node) = stickfigure.get_node(DrawOrderIndex(0)) {
-                    match node.angle_lock_mode {
-                        AngleLockMode::None => {
-                            node.is_angle_locked = false;
-                            node.angle_lock_is_main_node = false;
-                            node.angle_lock_relative_start = 0.0;
-                            node.angle_lock_stickfigure_start = 0.0;
-                        }
-                        AngleLockMode::Absolute => {
-                            node.is_angle_locked = true;
-                            node.angle_lock_is_main_node = true;
-                            node.angle_lock_relative_start = 0.0;
-                            node.angle_lock_stickfigure_start = 0.0;
-                        }
-                        AngleLockMode::Relative => {
-                            node.is_angle_locked = true;
-                            node.angle_lock_is_main_node = false;
-                            node.angle_lock_relative_start =
-                                parent_node.borrow().get_global_angle(stickfigure);
-                            node.angle_lock_stickfigure_start = root_node.borrow().local_angle;
-                        }
-                    }
-
-                    node.angle_lock_offset_minuend = node.get_global_angle(stickfigure);
-                    node.angle_lock_offset_subtrahend =
-                        parent_node.borrow().get_global_angle(stickfigure);
-                    node.angle_lock_offset =
-                        node.angle_lock_offset_minuend - node.angle_lock_offset_subtrahend;
-                } else {
-                    return Err(StickfigureError::GenericError("Failed to get parent node draw index when setting private properties (while writing .nodes).".to_string()));
-                }
+        TriangleType::RightTriangle => {
+            if node.triangle_flipped {
+                node.right_triangle_direction = -1;
             } else {
-                return Err(StickfigureError::GenericError("Failed to get parent node when setting private properties (while writing .nodes).".to_string()));
+                node.right_triangle_direction = 1;
             }
-        } else {
-            return Err(StickfigureError::GenericError(
-                "Failed to get root node when setting private properties (while writing .nodes)."
-                    .to_string(),
-            ));
         }
     }
-    Ok(())
-}
 
+    if node.node_type.to_integer() == NodeType::RootNode.to_integer() {
+        node.is_angle_locked = false;
+        node.angle_lock_is_main_node = false;
+        node.angle_lock_relative_start = 0.0;
+        node.angle_lock_stickfigure_start = 0.0;
+        node.angle_lock_offset_minuend = 0.0;
+        node.angle_lock_offset_subtrahend = 0.0;
+        node.angle_lock_offset = 0.0;
+    } else if let Some(parent_node_draw_index) =
+        stickfigure.get_parent(node.get_draw_order_index())
+    {
+        if let Some(parent_node) = stickfigure.get_node(parent_node_draw_index) {
+            if let Some(root_node) = stickfigure.get_node(DrawOrderIndex(0)) {
+                match node.angle_lock_mode {
+                    AngleLockMode::None => {
+                        node.is_angle_locked = false;
+                        node.angle_lock_is_main_node = false;
+                        node.angle_lock_relative_start = 0.0;
+                        node.angle_lock_stickfigure_start = 0.0;
+                    }
+                    AngleLockMode::Absolute => {
+                        node.is_angle_locked = true;
+                        node.angle_lock_is_main_node = true;
+                        node.angle_lock_relative_start = 0.0;
+                        node.angle_lock_stickfigure_start = 0.0;
+                    }
+                    AngleLockMode::Relative => {
+                        node.is_angle_locked = true;
+                        node.angle_lock_is_main_node = false;
+                        node.angle_lock_relative_start =
+                            parent_node.get_global_angle(stickfigure);
+                        node.angle_lock_stickfigure_start = root_node.local_angle;
+                    }
+                }
+
+                node.angle_lock_offset_minuend = node.get_global_angle(stickfigure);
+                node.angle_lock_offset_subtrahend =
+                    parent_node.get_global_angle(stickfigure);
+                node.angle_lock_offset =
+                    node.angle_lock_offset_minuend - node.angle_lock_offset_subtrahend;
+            } else {
+                return Err(StickfigureError::GenericError("Failed to get parent node draw index when setting private properties (while writing .nodes).".to_string()));
+            }
+        } else {
+            return Err(StickfigureError::GenericError("Failed to get parent node when setting private properties (while writing .nodes).".to_string()));
+        }
+    } else {
+        return Err(StickfigureError::GenericError(
+            "Failed to get root node when setting private properties (while writing .nodes)."
+                .to_string(),
+        ));
+    }
+Ok(())
+}
 fn write_node_connector_fields(
     version: i32,
     build: i32,
-    rc_node: &Rc<RefCell<Node>>,
+    node: &Node,
 ) -> Result<Vec<u8>, StickfigureError> {
     let mut byte_vec = Vec::new();
     if version >= 403 && build >= 38 {
-        if let Some(connector_data) = &rc_node.borrow().connector_data {
+        if let Some(connector_data) = &node.connector_data {
             let mut cursor_c1 = BinaryWriter::new(&mut byte_vec);
             cursor_c1
                 .write_f32(connector_data.local_x)
@@ -776,8 +769,7 @@ fn write_polyfill_header(stickfigure: &Stickfigure) -> Result<Vec<u8>, Stickfigu
     Ok(byte_vec)
 }
 
-fn write_polyfill(rc_polyfill: &Rc<RefCell<Polyfill>>) -> Result<Vec<u8>, StickfigureError> {
-    let polyfill = rc_polyfill.borrow();
+fn write_polyfill(polyfill: &Polyfill) -> Result<Vec<u8>, StickfigureError> {
 
     let mut byte_vec = Vec::new();
 
