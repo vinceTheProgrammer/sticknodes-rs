@@ -2,21 +2,21 @@
 |Data Type|Versions|Builds|Description|
 |---------|--------|------|-----------|
 |32-bit signed int big-endian|>=300|Any|<span style="color:coral">G</span> = Number of destination containers
-|sequence with size of <span style="color:coral">G</span> of [outer loop data](/spec/formats/stknds.md#ID-Conversion-Maps-Outer-Loop)|>=300|Any|See [outer loop data](/spec/formats/stknds.md#ID-Conversion-Maps-Outer-Loop) for more information.
+|sequence with size of <span style="color:coral">G</span> of [outer loop data](sticknodes-rs/spec/formats/stknds.md#ID-Conversion-Maps-Outer-Loop)|>=300|Any|See [outer loop data](sticknodes-rs/spec/formats/stknds.md#ID-Conversion-Maps-Outer-Loop) for more information.
 
 ### ID Conversion Maps Outer Loop (for each destination container)
 |Data Type|Versions|Builds|Description|
 |---------|--------|------|-----------|
 |32-bit signed int big-endian|>=300|Any|<span style="color:coral">H</span> = Number of source containers
 |32-bit signed int big-endian|>=300|Any|Destination container (timeline) UID
-|sequence with size of <span style="color:coral">H</span> of [middle loop data](/spec/formats/stknds.md#ID-Conversion-Maps-Middle-Loop)|>=300|Any|See [middle loop data](/spec/formats/stknds.md#ID-Conversion-Maps-Middle-Loop) for more information.
+|sequence with size of <span style="color:coral">H</span> of [middle loop data](sticknodes-rs/spec/formats/stknds.md#ID-Conversion-Maps-Middle-Loop)|>=300|Any|See [middle loop data](sticknodes-rs/spec/formats/stknds.md#ID-Conversion-Maps-Middle-Loop) for more information.
 
 ### ID Conversion Maps Middle Loop (for each source container)
 |Data Type|Versions|Builds|Description|
 |---------|--------|------|-----------|
 |32-bit signed int big-endian|>=300|Any|<span style="color:coral">I</span> = Number of ID mappings
 |32-bit signed int big-endian|>=300|Any|Source container (timeline) UID
-|sequence with size of <span style="color:coral">I</span> of [inner loop data](/spec/formats/stknds.md#ID-Conversion-Maps-Inner-Loop)|>=300|Any|See [inner loop data](/spec/formats/stknds.md#ID-Conversion-Maps-Inner-Loop) for more information.
+|sequence with size of <span style="color:coral">I</span> of [inner loop data](sticknodes-rs/spec/formats/stknds.md#ID-Conversion-Maps-Inner-Loop)|>=300|Any|See [inner loop data](sticknodes-rs/spec/formats/stknds.md#ID-Conversion-Maps-Inner-Loop) for more information.
 
 ### ID Conversion Maps Inner Loop (for each ID mapping)
 |Data Type|Versions|Builds|Description|
@@ -25,9 +25,9 @@
 |32-bit signed int big-endian|>=300|Any|Destination container figure ID
 
 #### Explanation
-When you paste a figure from one [container](/spec/formats/stknds.md#container) to another, Stick Nodes converts the ID of the figure from the source container to an ID within the destination container. If the figure was never pasted to the destination container before, it will assign a new unique ID to the figure within the destination container. If the figure was previously pasted to the destination container, it looks at the ID conversion map to know what ID to assign the figure within the destination container.
+When you paste a figure from one [container](sticknodes-rs/spec/formats/stknds.md#container) to another, Stick Nodes converts the ID of the figure from the source container to an ID within the destination container. If the figure was never pasted to the destination container before, it will assign a new unique ID to the figure within the destination container. If the figure was previously pasted to the destination container, it looks at the ID conversion map to know what ID to assign the figure within the destination container.
 
-For a visual aid to help understand ID conversion maps, see [ID converstion maps visual aid](/spec/formats/stknds.md#id-conversion-maps-visual-aid).
+For a visual aid to help understand ID conversion maps, see [ID converstion maps visual aid](sticknodes-rs/spec/formats/stknds.md#id-conversion-maps-visual-aid).
 
 #### Visual Aids
 You can imagine the map datatypes of an example ID conversion map like this:
